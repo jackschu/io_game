@@ -33,6 +33,10 @@ socket.onclose = event => {
     socket.send('Client Closed!')
 }
 
+socket.onmessage = event => {
+    console.log(event);
+}
+
 socket.onerror = error => {
     console.log('Socket Error: ', error)
 }

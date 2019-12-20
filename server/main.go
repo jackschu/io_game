@@ -2,10 +2,22 @@ package main
 
 import (
 	"github.com/gorilla/websocket"
+	//	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 )
+
+type Player struct {
+	xpos int
+	ypos int
+}
+
+func (p *Player) toString() string {
+	return fmt.Sprintf("(%d, %d)", p.xpos, p.ypos)
+}
+
+var player = &Player{200, 200}
 
 func homePage(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Home Page")
@@ -54,12 +66,22 @@ func reader(conn *websocket.Conn) {
 			return
 		}
 		// print out that message for clarity
-		fmt.Println(string(p))
+		//fmt.Println(string(p))
 
-		if err := conn.WriteMessage(messageType, p); err != nil {
-			log.Println(err)
-			return
+		if string(p) == "0" {
+			player.ypos += 1
+		} else if string(p) == "1" {
+			player.ypos -= 1
+		} else if string(p) == "2" {
+			player.xpos -= 1
+		} else if string(p) == "3" {
+			player.xpos += 1
 		}
 
+		posStatus := []byte("Position is: " + player.toString())
+		if err := conn.WriteMessage(messageType, posStatus); err != nil {
+			log.Println(err)
+			return			
+		}
 	}
 }
