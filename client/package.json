@@ -1,15 +1,21 @@
 {
-  "name": "io_game",
-  "version": "1.0.0",
-  "description": "A go at an IO game",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "prettier": "1.19.1"
-  },
-  "dependencies": {}
+	"name": "io_game",
+	"version": "1.0.0",
+	"description": "A go at an IO game",
+	"private": true,
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"build": "webpack --mode production",
+		"dev": "webpack --mode development"
+	},
+	"author": "",
+	"license": "ISC",
+	"devDependencies": {
+		"file-loader": "^5.0.2",
+		"pixi.js": "^5.2.0",
+		"prettier": "1.19.1",
+		"webpack": "^4.41.4",
+		"webpack-cli": "^3.3.10"
+	},
+	"dependencies": {}
 }

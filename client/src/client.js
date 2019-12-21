@@ -1,19 +1,25 @@
 import { socket } from './socket_io.js'
+import * as PIXI from 'pixi.js';
 
 let type = 'WebGL'
 if (!PIXI.utils.isWebGLSupported()) {
     type = 'canvas'
 }
-//let window = document.getElementById("header");
+
 let app = new PIXI.Application({
     antialias: true, // default: false
     transparent: false, // default: false
     resolution: 1, // default: 1
     autoReszie: true,
 })
+
 document.body.appendChild(app.view)
 
 window.addEventListener('resize', resize)
+
+function setup() {
+
+}
 function makePlayer(x, y, size, username) {
     var name = new PIXI.Text(username, {
         fontFamily: 'Arial',
