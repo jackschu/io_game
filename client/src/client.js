@@ -53,3 +53,9 @@ function resize() {
 }
 console.log(socket)
 resize()
+
+if (module.hot) {
+    module.hot.accept('./socket_io.js', function() {
+        console.log('socket_io.js hot-reloaded');
+    });
+}
