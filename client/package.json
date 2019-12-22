@@ -8,7 +8,7 @@
         "build": "webpack --mode production",
         "dev": "webpack --mode development",
         "start": "yarn dev && webpack-dev-server --open",
-        "lint": "eslint --fix '**/*.js' && prettier --write '**/*.{json,html}'"
+        "lint": "eslint --fix --ignore-path ../.gitignore '**/*.js' && prettier --write '**/*.{json,html}'"
     },
     "husky": {
         "hooks": {
