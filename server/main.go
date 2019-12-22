@@ -9,6 +9,7 @@ import (
 
 func serveWs(room *websocket.Room, w http.ResponseWriter, r *http.Request) {
 	conn, err := websocket.Upgrade(w, r)
+	
 	if err != nil {
 		log.Println(err)
 	}
@@ -26,7 +27,8 @@ func serveWs(room *websocket.Room, w http.ResponseWriter, r *http.Request) {
 func setupRoutes() {
 	room := websocket.NewRoom()
 	go room.Start()
-
+	game.GameLoop(room)
+	go gameLoop.start()
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(room, w, r)
 	})
