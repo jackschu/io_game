@@ -44,7 +44,7 @@ func setupRoutes() {
 func main() {
 	fmt.Println("Hello World")
 	setupRoutes()
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":8000", nil))
 }
 
 // We'll need to define an Upgrader
