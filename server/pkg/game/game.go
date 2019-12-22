@@ -28,29 +28,33 @@ func (g *GameLoop) Start() {
 	go g.poll()
 	
 	prev := time.Now()
-	speed := 0.2
+	speed := 0.1
+	ticker := time.NewTicker(16 * time.Millisecond)
 	for {
-		cur := time.Now()
-		dt := cur.Sub(prev).Milliseconds()
-		prev = cur
-		for _, player := range g.InfoMap {
-			if player.Direction == 0 {
-				player.Ypos -= float64(dt)*speed
-			} else if player.Direction == 1 {
-				player.Ypos += float64(dt)*speed
-			} else if player.Direction == 2 {
-				player.Xpos -= float64(dt)*speed
-			} else if player.Direction == 3 {
-				player.Xpos += float64(dt)*speed
+		select {
+		case <-ticker.C:
+			
+			cur := time.Now()
+			dt := cur.Sub(prev).Milliseconds()
+			prev = cur
+			for _, player := range g.InfoMap {
+				if player.Direction == 0 {
+					player.Ypos -= float64(dt)*speed
+				} else if player.Direction == 1 {
+					player.Ypos += float64(dt)*speed
+				} else if player.Direction == 2 {
+					player.Xpos -= float64(dt)*speed
+				} else if player.Direction == 3 {
+					player.Xpos += float64(dt)*speed
+				}
+			}
+			json_out, err := json.Marshal(g.InfoMap)
+			if err != nil {
+				log.Println(err)
+			}else{
+				g.Room.Broadcast <- websocket.Message{Body: string(json_out)}
 			}
 		}
-		json_out, err := json.Marshal(g.InfoMap)
-		if err != nil {
-			log.Println(err)
-		}else{
-			g.Room.Broadcast <- websocket.Message{Body: string(json_out)}
-		}
-		time.Sleep(time.Duration(500) * time.Millisecond)
 
 	}
 	
