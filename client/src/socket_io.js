@@ -20,7 +20,7 @@ function onKeyDown(key) {
     }
 }
 
-let socket = new WebSocket('ws://127.0.0.1:8080/ws');
+let socket = new WebSocket('ws://127.0.0.1:8000/ws');
 console.log('Attempting Connection...');
 
 socket.onopen = () => {

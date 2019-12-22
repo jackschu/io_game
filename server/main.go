@@ -9,12 +9,12 @@ import (
 )
 
 type Player struct {
-	xpos int
-	ypos int
+	Xpos int
+	Ypos int
 }
 
 func (p *Player) toString() string {
-	return fmt.Sprintf("(%d, %d)", p.xpos, p.ypos)
+	return fmt.Sprintf("(%d, %d)", p.Xpos, p.Ypos)
 }
 
 var player = &Player{200, 200}
@@ -42,7 +42,6 @@ func setupRoutes() {
 }
 
 func main() {
-	fmt.Println("Hello World")
 	setupRoutes()
 	log.Fatal(http.ListenAndServe(":8000", nil))
 }
@@ -60,7 +59,7 @@ var upgrader = websocket.Upgrader{
 func reader(conn *websocket.Conn) {
 	for {
 		// read in a message
-		messageType, p, err := conn.ReadMessage()
+		_, p, err := conn.ReadMessage()
 		if err != nil {
 			log.Println(err)
 			return
@@ -69,17 +68,16 @@ func reader(conn *websocket.Conn) {
 		//fmt.Println(string(p))
 
 		if string(p) == "0" {
-			player.ypos += 1
+			player.Ypos -= 1
 		} else if string(p) == "1" {
-			player.ypos -= 1
+			player.Ypos += 1
 		} else if string(p) == "2" {
-			player.xpos -= 1
+			player.Xpos -= 1
 		} else if string(p) == "3" {
-			player.xpos += 1
+			player.Xpos += 1
 		}
 
-		posStatus := []byte("Position is: " + player.toString())
-		if err := conn.WriteMessage(messageType, posStatus); err != nil {
+		if err := conn.WriteJSON(*player); err != nil {
 			log.Println(err)
 			return			
 		}
