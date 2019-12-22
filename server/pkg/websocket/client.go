@@ -26,6 +26,5 @@ func (c *Client) Read() {
 			return
 		}
 		c.Room.Actions <- &communication.Action{ID: c.ID, Move: string(p)}
-		fmt.Printf("Message Received: %+v\n", string(p))
 	}
 }
