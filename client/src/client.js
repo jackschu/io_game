@@ -1,7 +1,15 @@
 import { socket } from './socket_io.js';
 import * as PIXI from 'pixi.js';
 
-let type = 'WebGL';
+socket.onmessage = event => {
+	console.log(event);
+	let data = JSON.parse(event.data);
+    you_x = data.Xpos;
+	you_y = data.Ypos;
+	console.log(you_x);
+	console.log(you_y);
+}
+
 if (!PIXI.utils.isWebGLSupported()) {
     type = 'canvas';
 }
@@ -17,7 +25,6 @@ document.body.appendChild(app.view);
 
 window.addEventListener('resize', resize);
 
-function setup() {}
 function makePlayer(x, y, size, username) {
     var name = new PIXI.Text(username, {
         fontFamily: 'Arial',
@@ -30,13 +37,36 @@ function makePlayer(x, y, size, username) {
     const rect = new PIXI.Graphics()
         .beginFill(0xff0000)
         .drawRect(0, 0, size, size);
+
     rect.position.set(x - size / 2, y - size / 2);
     rect.addChild(name);
     return rect;
 }
 
-const you = makePlayer(app.screen.width / 2, app.screen.height / 2, 200, 'you');
-app.stage.addChild(you);
+
+let you;
+let you_x;
+let you_y;
+
+function setup() {
+	you = makePlayer(app.screen.width / 2, app.screen.height / 2, 200, 'you')
+	you_x = you.x;
+	app.stage.addChild(you);
+	app.ticker.add(delta => gameLoop(delta));
+}
+
+// delta is the fractional lag between frame (0) if not lagging
+function gameLoop(delta) {
+	if(you_x){
+		you.x = you_x;
+	}
+	if(you_y){
+		you.y = you_y;
+	}
+}
+
+
+
 // Add it to the stage
 
 // Resize function window
@@ -47,11 +77,12 @@ function resize() {
     // You can use the 'screen' property as the renderer visible
     // area, this is more useful than view.width/height because
     // it handles resolution
-    you.position.set(app.screen.width / 2 - 100, app.screen.height / 2 - 100);
 }
-console.log(socket);
-resize();
 
+console.log(socket);
+
+resize();
+setup();
 if (module.hot) {
     module.hot.accept('./socket_io.js', function() {
         console.log('socket_io.js hot-reloaded');
