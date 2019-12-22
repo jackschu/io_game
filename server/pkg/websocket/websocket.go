@@ -35,33 +35,3 @@ func Upgrade(w http.ResponseWriter, r *http.Request) (*websocket.Conn, error) {
 	return ws, nil
 }
 
-// define a reader which will listen for
-// new messages being sent to our WebSocket
-// endpoint
-func Reader(conn *websocket.Conn) {
-	for {
-		// read in a message
-		_, p, err := conn.ReadMessage()
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		// print out that message for clarity
-		//fmt.Println(string(p))
-
-		if string(p) == "0" {
-			player.Ypos -= 1
-		} else if string(p) == "1" {
-			player.Ypos += 1
-		} else if string(p) == "2" {
-			player.Xpos -= 1
-		} else if string(p) == "3" {
-			player.Xpos += 1
-		}
-
-		if err := conn.WriteJSON(*player); err != nil {
-			log.Println(err)
-			return
-		}
-	}
-}

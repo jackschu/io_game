@@ -2,6 +2,8 @@ package main
 
 import (
 	"github.com/jackschu/io_game/pkg/websocket"
+	"github.com/lithammer/shortuuid/v3"
+
 	"github.com/jackschu/io_game/pkg/game"
 	"log"
 	"net/http"
@@ -9,7 +11,7 @@ import (
 
 func serveWs(room *websocket.Room, w http.ResponseWriter, r *http.Request) {
 	conn, err := websocket.Upgrade(w, r)
-	
+
 	if err != nil {
 		log.Println(err)
 	}
@@ -17,6 +19,7 @@ func serveWs(room *websocket.Room, w http.ResponseWriter, r *http.Request) {
 	log.Println("Client Connected")
 
 	client := &websocket.Client{
+		ID:   shortuuid.New(),
 		Conn: conn,
 		Room: room,
 	}
@@ -27,8 +30,8 @@ func serveWs(room *websocket.Room, w http.ResponseWriter, r *http.Request) {
 func setupRoutes() {
 	room := websocket.NewRoom()
 	go room.Start()
-	game.GameLoop(room)
-	go gameLoop.start()
+	game := game.NewGameLoop(room)
+	go game.Start()
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(room, w, r)
 	})

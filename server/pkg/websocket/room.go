@@ -1,12 +1,20 @@
 package websocket
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/jackschu/io_game/pkg/communication"
+)
 
 type Room struct {
 	Joining   chan *Client
 	Leaving   chan *Client
 	Clients   map[*Client]bool
 	Broadcast chan Message
+	Actions   chan *communication.Action
+}
+
+type Message struct {
+	Body string
 }
 
 func NewRoom() *Room {
@@ -15,6 +23,7 @@ func NewRoom() *Room {
 		Leaving:   make(chan *Client),
 		Clients:   make(map[*Client]bool),
 		Broadcast: make(chan Message),
+		Actions:   make(chan *communication.Action),
 	}
 }
 
@@ -24,6 +33,7 @@ func (room *Room) Start() {
 		case client := <-room.Joining:
 			room.Clients[client] = true
 			fmt.Println("Joining, Users in room: ", len(room.Clients))
+			room.Actions <- &communication.Action{ID: client.ID, Move: "join"}
 			break
 		case client := <-room.Leaving:
 			delete(room.Clients, client)

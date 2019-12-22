@@ -1,12 +1,15 @@
 package game
 
 type PlayerInfo struct {
-	ID string `json:"id"`
-	Xpos int
-	Xpos int
-	Direction string
+	Xpos      float64
+	Ypos      float64
+	Direction int
 }
 
-
-
-
+func NewPlayerInfo(id string) *PlayerInfo {
+	return &PlayerInfo{
+		Xpos:      200,
+		Ypos:      200,
+		Direction: 0,
+	}
+}
