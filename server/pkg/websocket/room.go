@@ -38,9 +38,9 @@ func (room *Room) Start() {
 		case client := <-room.Leaving:
 			delete(room.Clients, client)
 			fmt.Println("Leaving, Users in room: ", len(room.Clients))
+			room.Actions <- &communication.Action{ID: client.ID, Move: "leave"}
 			break
 		case message := <-room.Broadcast:
-			fmt.Println("Sending message to all clients in Room")
 			for client, _ := range room.Clients {
 				if err := client.Conn.WriteJSON(message); err != nil {
 					fmt.Println(err)
