@@ -6,19 +6,29 @@ import (
 	"net/http"
 )
 
-func wsEndpoint(w http.ResponseWriter, r *http.Request) {
-	ws, err := websocket.Upgrade(w, r)
+func serveWs(room *websocket.Room, w http.ResponseWriter, r *http.Request) {
+	conn, err := websocket.Upgrade(w, r)
 	if err != nil {
 		log.Println(err)
 	}
 	// helpful log statement to show connections
 	log.Println("Client Connected")
 
-	websocket.Reader(ws)
+	client := &websocket.Client{
+		Conn: conn,
+		Room: room,
+	}
+	room.Joining <- client
+	client.Read()
 }
 
 func setupRoutes() {
-	http.HandleFunc("/ws", wsEndpoint)
+	room := websocket.NewRoom()
+	go room.Start()
+
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		serveWs(room, w, r)
+	})
 }
 
 func main() {
