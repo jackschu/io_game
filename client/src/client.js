@@ -2,13 +2,13 @@ import { socket } from './socket_io.js';
 import * as PIXI from 'pixi.js';
 
 socket.onmessage = event => {
-	console.log(event);
-	let data = JSON.parse(event.data);
+    console.log(event);
+    let data = JSON.parse(event.data);
     you_x = data.Xpos;
-	you_y = data.Ypos;
-	console.log(you_x);
-	console.log(you_y);
-}
+    you_y = data.Ypos;
+    console.log(you_x);
+    console.log(you_y);
+};
 
 if (!PIXI.utils.isWebGLSupported()) {
     type = 'canvas';
@@ -43,29 +43,26 @@ function makePlayer(x, y, size, username) {
     return rect;
 }
 
-
 let you;
 let you_x;
 let you_y;
 
 function setup() {
-	you = makePlayer(app.screen.width / 2, app.screen.height / 2, 200, 'you')
-	you_x = you.x;
-	app.stage.addChild(you);
-	app.ticker.add(delta => gameLoop(delta));
+    you = makePlayer(app.screen.width / 2, app.screen.height / 2, 200, 'you');
+    you_x = you.x;
+    app.stage.addChild(you);
+    app.ticker.add(delta => gameLoop(delta));
 }
 
 // delta is the fractional lag between frame (0) if not lagging
 function gameLoop(delta) {
-	if(you_x){
-		you.x = you_x;
-	}
-	if(you_y){
-		you.y = you_y;
-	}
+    if (you_x) {
+        you.x = you_x;
+    }
+    if (you_y) {
+        you.y = you_y;
+    }
 }
-
-
 
 // Add it to the stage
 
