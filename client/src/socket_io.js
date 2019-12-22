@@ -25,12 +25,10 @@ console.log('Attempting Connection...');
 
 socket.onopen = () => {
     console.log('Successfully Connected');
-    socket.send('Hi From the Client!');
 };
 
 socket.onclose = event => {
     console.log('Socket Closed Connection: ', event);
-    socket.send('Client Closed!');
 };
 
 socket.onmessage = event => {

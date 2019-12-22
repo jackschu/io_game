@@ -1,7 +1,6 @@
 package websocket
 
 import (
-	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/jackschu/io_game/pkg/communication"
 	"log"
