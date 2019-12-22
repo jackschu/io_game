@@ -20,8 +20,8 @@ socket.onmessage = event => {
     let rawData = JSON.parse(JSON.parse(event.data).Body);
     for (const key in rawData) {
         const data = rawData[key];
-        if (players[data.id] === undefined) {
-            players[data.id] = new Player(
+        if (players[key] === undefined) {
+            players[key] = new Player(
                 makePlayer(
                     data.Xpos,
                     data.Ypos,
@@ -29,10 +29,10 @@ socket.onmessage = event => {
                     key.substring(0, 5)
                 )
             );
-            app.stage.addChild(players[data.id].pixi_obj);
+            app.stage.addChild(players[key].pixi_obj);
         } else {
-            players[data.id].nextX = data.Xpos;
-            players[data.id].nextY = data.Ypos;
+            players[key].nextX = data.Xpos;
+            players[key].nextY = data.Ypos;
         }
         console.log(players);
     }
@@ -99,8 +99,6 @@ function resize() {
     // area, this is more useful than view.width/height because
     // it handles resolution
 }
-
-console.log(socket);
 
 resize();
 setup();
