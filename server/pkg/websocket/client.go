@@ -3,19 +3,17 @@ package websocket
 import (
 	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/jackschu/io_game/pkg/game"
 	"log"
 )
 
 type Client struct {
 	ID   string
-	Conn *websocket.Conn
+	Conn *websocket.Conn	
 	Room *Room
+	Info *game.PlayerInfo
 }
 
-type Message struct {
-	Type   int    `json:"type"`
-	Action string `json:"action"`
-}
 
 func (c *Client) Read() {
 	defer func() {
@@ -29,8 +27,8 @@ func (c *Client) Read() {
 			log.Println(err)
 			return
 		}
-		message := Message{Type: messageType, Action: string(p)}
-		c.Room.Broadcast <- message
-		fmt.Printf("Message Received: %+v\n", message)
+		c.Player.Direction := string(p)
+		
+		fmt.Printf("Message Received: %+v\n", string(p))
 	}
 }

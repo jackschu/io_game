@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/jackschu/io_game/pkg/websocket"
+	"github.com/jackschu/io_game/pkg/game"
 	"log"
 	"net/http"
 )
