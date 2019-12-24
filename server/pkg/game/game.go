@@ -31,7 +31,7 @@ func (g *GameLoop) Start() {
 		case <-ticker.C:
 
 			cur := time.Now()
-			dt := cur.Sub(prev).Seconds() / 1000.0
+			dt := cur.Sub(prev).Seconds() * 1000.0
 			prev = cur
 			for _, player := range g.InfoMap {
 				if player.Direction == 0 {
