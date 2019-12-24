@@ -34,7 +34,6 @@ socket.onmessage = event => {
             players[key].nextX = data.Xpos;
             players[key].nextY = data.Ypos;
         }
-        console.log(players);
     }
 };
 

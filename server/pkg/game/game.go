@@ -2,6 +2,7 @@ package game
 
 import (
 	"encoding/json"
+	"github.com/jackschu/io_game/pkg/communication"
 	"github.com/jackschu/io_game/pkg/websocket"
 	"log"
 	"strconv"
@@ -59,21 +60,24 @@ func (g *GameLoop) Start() {
 func (g *GameLoop) poll() {
 	for {
 		action := <-g.Room.Actions
-		move := action.Move
+		go g.registerMove(action)
+	}
+}
 
-		if move == "join" {
-			g.InfoMap[action.ID] = NewPlayerInfo(action.ID)
-			continue
-		}
-		if move == "leave" {
-			delete(g.InfoMap, action.ID)
-			continue
-		}
-		player := g.InfoMap[action.ID]
-		move_int, err := strconv.Atoi(move)
-		player.Direction = move_int
-		if err != nil {
-			log.Println(err)
-		}
+func (g *GameLoop) registerMove(action *communication.Action) {
+	move := action.Move
+	if move == "join" {
+		g.InfoMap[action.ID] = NewPlayerInfo(action.ID)
+		return
+	}
+	if move == "leave" {
+		delete(g.InfoMap, action.ID)
+		return
+	}
+	player := g.InfoMap[action.ID]
+	move_int, err := strconv.Atoi(move)
+	player.Direction = move_int
+	if err != nil {
+		log.Println(err)
 	}
 }
