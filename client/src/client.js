@@ -11,6 +11,9 @@ class Player {
         this.pixi_obj.x = this.nextX;
         this.pixi_obj.y = this.nextY;
     }
+    destroy() {
+        this.pixi_obj.destroy();
+    }
 }
 
 const PLAYER_SIZE = 200;
@@ -33,6 +36,13 @@ socket.onmessage = event => {
         } else {
             players[key].nextX = data.Xpos;
             players[key].nextY = data.Ypos;
+        }
+    }
+    for (const key in players) {
+        if (rawData[key] === undefined) {
+            players[key].destroy();
+
+            delete players[key];
         }
     }
 };
