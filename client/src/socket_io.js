@@ -19,9 +19,13 @@ function onKeyDown(key) {
         socket.send(output);
     }
 }
-const host = window.location.hostname;
+let host = window.location.hostname;
+if (host == 'localhost') {
+    host = host + ':8000';
+}
+
 let socket = new WebSocket('ws://' + host + '/ws');
-console.log('Attempting Connection...');
+console.log('Attempting Connection...' + host);
 
 socket.onopen = () => {
     console.log('Successfully Connected');
