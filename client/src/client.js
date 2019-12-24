@@ -1,5 +1,5 @@
 import { socket } from './socket_io.js';
-import * as PIXI from 'pixi.js';
+import * as PIXI from 'pixi.js-legacy';
 
 class Player {
     constructor(pixi_obj) {
@@ -46,10 +46,6 @@ socket.onmessage = event => {
         }
     }
 };
-
-if (!PIXI.utils.isWebGLSupported()) {
-    type = 'canvas';
-}
 
 let app = new PIXI.Application({
     antialias: true, // default: false
