@@ -35,6 +35,7 @@ func setupRoutes() {
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(room, w, r)
 	})
+	http.Handle("/", http.FileServer(http.Dir("../client/dist")))
 }
 
 func main() {
