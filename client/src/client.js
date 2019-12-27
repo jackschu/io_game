@@ -4,6 +4,7 @@ const WIDTH = 1500;
 const HEIGHT = 1000;
 const NEON = 0x33ff3f;
 const PERSPECTIVE_D = 250;
+let BACK_BOX_DEPTH;
 class Player {
     constructor(pixi_obj) {
         this.pixi_obj = pixi_obj;
@@ -18,7 +19,7 @@ class Player {
         this.pixi_obj.destroy();
     }
 }
-let you;
+
 const PLAYER_SIZE = 200;
 const players = {};
 let app = new PIXI.Application({
@@ -87,21 +88,31 @@ function pointProject(x, y, z) {
     return [xp, yp];
 }
 
-function emptyBox(depth) {
+function emptyBox(depth, color = NEON) {
     let box = new PIXI.Graphics();
-    box.lineStyle(2, NEON, 1);
+    box.lineStyle(2, color, 1);
     box.beginFill(0, 0);
     const [x0, y0] = pointProject(0, 0, depth);
     const [x1, y1] = pointProject(WIDTH, HEIGHT, depth);
-    console.log(x1);
-    console.log(y1);
     box.drawRect(x0, y0, x1 - x0, y1 - y0);
     box.endFill();
     return box;
 }
 
+function getLine(x0, y0, z0, x1, y1, z1) {
+    let line = new PIXI.Graphics();
+    line.lineStyle(2, NEON);
+    const [x0_out, y0_out] = pointProject(x0, y0, z0);
+    const [x1_out, y1_out] = pointProject(x1, y1, z1);
+    line.moveTo(x0_out, y0_out);
+    line.lineTo(x1_out, y1_out);
+    return line;
+}
+
+let depth_indicator;
+
 function setup() {
-    //DEBUG corners for debugging
+    // DEBUG corners for debugging
     let corner = new PIXI.Graphics().beginFill(0xff0000).drawRect(0, 0, 10, 10);
     app.stage.addChild(corner);
     let corner2 = new PIXI.Graphics()
@@ -109,9 +120,31 @@ function setup() {
         .drawRect(WIDTH - 10, HEIGHT - 10, 10, 10);
     app.stage.addChild(corner2);
 
-    for (let i = 0; i < 10; i++) {
+    // add green frames
+    const num_boxes = 10;
+    for (let i = 0; i < num_boxes; i++) {
         const box = emptyBox(i * 100);
         app.stage.addChild(box);
+    }
+    BACK_BOX_DEPTH = (num_boxes - 1) * 100;
+
+    // add lines connecting frames
+    const line_indices = [
+        [0, 0],
+        [0, 1],
+        [1, 0],
+        [1, 1],
+    ];
+    for (const [i, j] of line_indices) {
+        let line = getLine(
+            i * WIDTH,
+            j * HEIGHT,
+            0,
+            i * WIDTH,
+            j * HEIGHT,
+            BACK_BOX_DEPTH
+        );
+        app.stage.addChild(line);
     }
 
     app.ticker.add(delta => gameLoop(delta));
@@ -137,7 +170,6 @@ function resize() {
     app.renderer.resize(window.innerWidth, window.innerHeight);
     app.stage.scale.x = app.stage.scale.y = ratio;
 
-    console.log(app.stage);
     // TODO Move container to the center
     // app.stage.x = app.screen.width / 5;
     // app.stage.y = app.screen.height / 5;
