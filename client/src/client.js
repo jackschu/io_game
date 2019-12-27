@@ -1,6 +1,9 @@
 import { socket } from './socket_io.js';
 import * as PIXI from 'pixi.js-legacy';
-
+const WIDTH = 1500;
+const HEIGHT = 1000;
+const NEON = 0x33ff3f;
+const PERSPECTIVE_D = 250;
 class Player {
     constructor(pixi_obj) {
         this.pixi_obj = pixi_obj;
@@ -15,9 +18,19 @@ class Player {
         this.pixi_obj.destroy();
     }
 }
-
+let you;
 const PLAYER_SIZE = 200;
 const players = {};
+let app = new PIXI.Application({
+    antialias: true, // default: false
+    transparent: false, // default: false
+    resolution: 1, // default: 1
+    resizeTo: window,
+});
+
+document.body.appendChild(app.view);
+
+window.addEventListener('resize', resize);
 
 socket.onmessage = event => {
     let rawData = JSON.parse(JSON.parse(event.data).Body);
@@ -47,17 +60,6 @@ socket.onmessage = event => {
     }
 };
 
-let app = new PIXI.Application({
-    antialias: true, // default: false
-    transparent: false, // default: false
-    resolution: 1, // default: 1
-    autoResize: true,
-});
-
-document.body.appendChild(app.view);
-
-window.addEventListener('resize', resize);
-
 function makePlayer(x, y, size, username) {
     var name = new PIXI.Text(username, {
         fontFamily: 'Arial',
@@ -76,13 +78,42 @@ function makePlayer(x, y, size, username) {
     return rect;
 }
 
-let you;
+function pointProject(x, y, z) {
+    let x_0 = WIDTH / 2;
+    let y_0 = HEIGHT / 2;
+    let xp = x_0 + ((x - x_0) * PERSPECTIVE_D) / (z + PERSPECTIVE_D);
+    let yp = y_0 + ((y - y_0) * PERSPECTIVE_D) / (z + PERSPECTIVE_D);
+
+    return [xp, yp];
+}
+
+function emptyBox(depth) {
+    let box = new PIXI.Graphics();
+    box.lineStyle(2, NEON, 1);
+    box.beginFill(0, 0);
+    const [x0, y0] = pointProject(0, 0, depth);
+    const [x1, y1] = pointProject(WIDTH, HEIGHT, depth);
+    console.log(x1);
+    console.log(y1);
+    box.drawRect(x0, y0, x1 - x0, y1 - y0);
+    box.endFill();
+    return box;
+}
 
 function setup() {
-    /*
-    you = new Player(app.screen.width / 2, app.screen.height / 2, 200, 'you');
-    app.stage.addChild(you);
-    */
+    //DEBUG corners for debugging
+    let corner = new PIXI.Graphics().beginFill(0xff0000).drawRect(0, 0, 10, 10);
+    app.stage.addChild(corner);
+    let corner2 = new PIXI.Graphics()
+        .beginFill(0xff0000)
+        .drawRect(WIDTH - 10, HEIGHT - 10, 10, 10);
+    app.stage.addChild(corner2);
+
+    for (let i = 0; i < 10; i++) {
+        const box = emptyBox(i * 100);
+        app.stage.addChild(box);
+    }
+
     app.ticker.add(delta => gameLoop(delta));
 }
 
@@ -98,8 +129,20 @@ function gameLoop(delta) {
 // Resize function window
 function resize() {
     // Resize the renderer
-    app.renderer.resize(window.innerWidth, window.innerHeight);
 
+    var ratio = Math.min(
+        window.innerWidth / WIDTH,
+        window.innerHeight / HEIGHT
+    );
+    app.renderer.resize(window.innerWidth, window.innerHeight);
+    app.stage.scale.x = app.stage.scale.y = ratio;
+
+    console.log(app.stage);
+    // TODO Move container to the center
+    // app.stage.x = app.screen.width / 5;
+    // app.stage.y = app.screen.height / 5;
+    // app.stage.pivot.x = app.stage.width / 5;
+    // app.stage.pivot.y = app.stage.height / 5;
     // You can use the 'screen' property as the renderer visible
     // area, this is more useful than view.width/height because
     // it handles resolution
