@@ -9,15 +9,37 @@ import (
 	"time"
 )
 
+type BallInfo struct {
+	Xpos float64
+	Ypos float64
+	Zpos float64
+	Xvel float64
+	Yvel float64
+	Zvel float64
+}
+
+func NewBallInfo() *BallInfo {
+	return &BallInfo{
+		Xpos: 750,
+		Ypos: 500,
+		Zpos: 0,
+		Xvel: 0,
+		Yvel: 0,
+		Zvel: 1.3,
+	}
+}
+
 type GameLoop struct {
 	Room    *websocket.Room
 	InfoMap map[string]*PlayerInfo
+	Ball    *BallInfo
 }
 
 func NewGameLoop(room *websocket.Room) *GameLoop {
 	return &GameLoop{
 		Room:    room,
 		InfoMap: make(map[string]*PlayerInfo),
+		Ball:    NewBallInfo(),
 	}
 }
 
@@ -30,7 +52,6 @@ func (g *GameLoop) Start() {
 	for {
 		select {
 		case <-ticker.C:
-
 			cur := time.Now()
 			dt := cur.Sub(prev).Seconds() * 1000.0
 			prev = cur
@@ -45,7 +66,28 @@ func (g *GameLoop) Start() {
 					player.Xpos += float64(dt) * speed
 				}
 			}
-			json_out, err := json.Marshal(g.InfoMap)
+
+			if g.Ball.Zpos > 800 && g.Ball.Zvel > 0 {
+				g.Ball.Zvel *= -1
+			} else if g.Ball.Zpos < 0 && g.Ball.Zvel < 0 {
+				g.Ball.Zvel *= -1
+			}
+
+			g.Ball.Zpos += float64(dt) * g.Ball.Zvel
+			players_bytes, err := json.Marshal(g.InfoMap)
+			if err != nil {
+				log.Println(err)
+			}
+			ball_bytes, err := json.Marshal(g.Ball)
+			if err != nil {
+				log.Println(err)
+			}
+			pre_json_out := map[string]string{
+				"players": string(players_bytes),
+				"ball":    string(ball_bytes),
+			}
+
+			json_out, err := json.Marshal(pre_json_out)
 			if err != nil {
 				log.Println(err)
 			} else {

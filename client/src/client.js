@@ -4,6 +4,7 @@ const WIDTH = 1500;
 const HEIGHT = 1000;
 const NEON = 0x33ff3f;
 const PERSPECTIVE_D = 250;
+const BALL_RADIUS = 50;
 let BACK_BOX_DEPTH;
 class DepthIndicator {
     constructor(pixi_obj) {
@@ -17,6 +18,27 @@ class DepthIndicator {
         this.pixi_obj.y = y0;
         this.pixi_obj.width = x1 - x0;
         this.pixi_obj.height = y1 - y0;
+    }
+}
+
+class Ball {
+    constructor(depth) {
+        this.pixi_obj = new PIXI.Graphics().beginFill(0xff0000);
+        const [x0, _] = pointProject(BALL_RADIUS + WIDTH / 2, 0, depth);
+        const radius = x0 - WIDTH / 2;
+        this.pixi_obj.drawCircle(WIDTH / 2, HEIGHT / 2, radius);
+        this.nextX = this.pixi_obj.x;
+        this.nextY = this.pixi_obj.y;
+        this.nextZ = depth;
+        app.stage.addChild(this.pixi_obj);
+    }
+    update() {
+        const [x0, _] = pointProject(BALL_RADIUS + WIDTH / 2, 0, this.nextZ);
+        const radius = x0 - WIDTH / 2;
+        this.pixi_obj.clear();
+        this.pixi_obj.beginFill(0xff0000);
+        this.pixi_obj.drawCircle(WIDTH / 2, HEIGHT / 2, radius);
+        this.pixi_obj.endFill();
     }
 }
 
@@ -37,6 +59,7 @@ class Player {
 
 const PLAYER_SIZE = 200;
 const players = {};
+let ball;
 let depth_indicator;
 
 let app = new PIXI.Application({
@@ -51,9 +74,11 @@ document.body.appendChild(app.view);
 window.addEventListener('resize', resize);
 
 socket.onmessage = event => {
-    let rawData = JSON.parse(JSON.parse(event.data).Body);
-    for (const key in rawData) {
-        const data = rawData[key];
+    let ball_and_players = JSON.parse(JSON.parse(event.data).Body);
+    let rawPlayerData = JSON.parse(ball_and_players.players);
+
+    for (const key in rawPlayerData) {
+        const data = rawPlayerData[key];
         if (players[key] === undefined) {
             players[key] = new Player(
                 makePlayer(
@@ -70,12 +95,21 @@ socket.onmessage = event => {
         }
     }
     for (const key in players) {
-        if (rawData[key] === undefined) {
+        if (rawPlayerData[key] === undefined) {
             players[key].destroy();
-
             delete players[key];
         }
     }
+
+    let ballData = JSON.parse(ball_and_players.ball);
+    if (ball === undefined) {
+        console.log('new ball');
+        ball = new Ball(ballData.Zpos);
+    }
+    ball.nextX = ballData.Xpos;
+    ball.nextY = ballData.Ypos;
+    ball.nextZ = ballData.Zpos;
+    depth_indicator.depth = ball.nextZ;
 };
 
 function makePlayer(x, y, size, username) {
@@ -174,22 +208,18 @@ function setup() {
     app.ticker.add(delta => gameLoop(delta));
 }
 
-// TODO replace mult and depth_indicator with just ball_depth
-let mult = 1;
-
 // delta is the fractional lag between frames (1) if not lagging
 function gameLoop(delta) {
     if (delta > 1.1) {
         console.log(delta);
     }
-    if (depth_indicator.depth > BACK_BOX_DEPTH) {
-        mult = -1;
-    } else if (depth_indicator.depth < 0) {
-        mult = 1;
-    }
-    depth_indicator.depth += 4 * delta * mult;
+
     for (const key of Object.keys(players)) {
         players[key].update();
+    }
+
+    if (ball) {
+        ball.update();
     }
 
     depth_indicator.update();
