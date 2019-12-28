@@ -37,7 +37,8 @@ class Ball {
         const radius = x0 - WIDTH / 2;
         this.pixi_obj.clear();
         this.pixi_obj.beginFill(0xff0000);
-        this.pixi_obj.drawCircle(WIDTH / 2, HEIGHT / 2, radius);
+        const [x, y] = pointProject(this.nextX, this.nextY, this.nextZ);
+        this.pixi_obj.drawCircle(x, y, radius);
         this.pixi_obj.endFill();
     }
 }

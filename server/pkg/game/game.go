@@ -18,14 +18,15 @@ type BallInfo struct {
 	Zvel float64
 }
 
+// TODO replace cwith constant vars
 func NewBallInfo() *BallInfo {
 	return &BallInfo{
 		Xpos: 750,
 		Ypos: 500,
 		Zpos: 0,
-		Xvel: 0,
-		Yvel: 0,
-		Zvel: 1.3,
+		Xvel: 0.7,
+		Yvel: 0.7,
+		Zvel: 0.7,
 	}
 }
 
@@ -67,12 +68,28 @@ func (g *GameLoop) Start() {
 				}
 			}
 
+			// TODO replace hardd coded walls withshared consts
+			ball_radius := float64(50)
 			if g.Ball.Zpos > 800 && g.Ball.Zvel > 0 {
 				g.Ball.Zvel *= -1
 			} else if g.Ball.Zpos < 0 && g.Ball.Zvel < 0 {
 				g.Ball.Zvel *= -1
 			}
 
+			if g.Ball.Xpos > 1500-ball_radius && g.Ball.Xvel > 0 {
+				g.Ball.Xvel *= -1
+			} else if g.Ball.Xpos < 0+ball_radius && g.Ball.Xvel < 0 {
+				g.Ball.Xvel *= -1
+			}
+
+			if g.Ball.Ypos > 1000-ball_radius && g.Ball.Yvel > 0 {
+				g.Ball.Yvel *= -1
+			} else if g.Ball.Ypos < 0+ball_radius && g.Ball.Yvel < 0 {
+				g.Ball.Yvel *= -1
+			}
+
+			g.Ball.Xpos += float64(dt) * g.Ball.Xvel
+			g.Ball.Ypos += float64(dt) * g.Ball.Yvel
 			g.Ball.Zpos += float64(dt) * g.Ball.Zvel
 			players_bytes, err := json.Marshal(g.InfoMap)
 			if err != nil {
