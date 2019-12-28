@@ -174,11 +174,10 @@ function getLine(x0, y0, z0, x1, y1, z1) {
 function setup() {
     app.stage.interactive = true;
     //app.renderer.plugins.interaction.interactionFrequency = 500;
-    console.log(app.stage);
     app.stage.on('mousemove', function mouseMoveHandler(e) {
         const pos = e.data.getLocalPosition(app.stage);
         const out_obj = {
-            XPos: clip(pos.x, 0, WIDHT),
+            XPos: clip(pos.x, 0, WIDTH),
             YPos: clip(pos.y, 0, HEIGHT),
         };
         const out = JSON.stringify(out_obj);
