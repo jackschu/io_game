@@ -5,7 +5,8 @@ const HEIGHT = 1000;
 const NEON = 0x33ff3f;
 const PERSPECTIVE_D = 250;
 const BALL_RADIUS = 50;
-const PLAYER_SIZE = 200;
+const VIRTUAL_PLAYER_SIZE = 200; // what we think of it as
+let PLAYER_SIZE; // what we tell pixi
 let BACK_BOX_DEPTH;
 class DepthIndicator {
     constructor(pixi_obj) {
@@ -251,6 +252,7 @@ function resize() {
     );
     app.renderer.resize(window.innerWidth, window.innerHeight);
     app.stage.scale.x = app.stage.scale.y = ratio;
+    PLAYER_SIZE = (app.screen.height * VIRTUAL_PLAYER_SIZE) / HEIGHT / ratio;
 
     // TODO Move container to the center
     // app.stage.x = app.screen.width / 5;
