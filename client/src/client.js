@@ -170,20 +170,20 @@ function getLine(x0, y0, z0, x1, y1, z1) {
     line.lineTo(x1_out, y1_out);
     return line;
 }
-
+function moveHandler(e) {
+    console.log(e);
+    const pos = e.data.getLocalPosition(app.stage);
+    const out_obj = {
+        XPos: clip(pos.x, 0, WIDTH),
+        YPos: clip(pos.y, 0, HEIGHT),
+    };
+    const out = JSON.stringify(out_obj);
+    socket.send(out);
+}
 function setup() {
     app.stage.interactive = true;
     //app.renderer.plugins.interaction.interactionFrequency = 500;
-    app.stage.on('mousemove', function mouseMoveHandler(e) {
-        const pos = e.data.getLocalPosition(app.stage);
-        const out_obj = {
-            XPos: clip(pos.x, 0, WIDTH),
-            YPos: clip(pos.y, 0, HEIGHT),
-        };
-        const out = JSON.stringify(out_obj);
-        socket.send(out);
-    });
-
+    app.stage.on('pointermove', moveHandler);
     // DEBUG corners for debugging
     let corner = new PIXI.Graphics().beginFill(0xff0000).drawRect(0, 0, 10, 10);
     app.stage.addChild(corner);
