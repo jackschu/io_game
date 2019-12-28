@@ -5,6 +5,8 @@ const HEIGHT = 1000;
 const NEON = 0x33ff3f;
 const PERSPECTIVE_D = 250;
 const BALL_RADIUS = 50;
+const RENDER_DELAY = 100;
+
 let BACK_BOX_DEPTH;
 class DepthIndicator {
     constructor(pixi_obj) {
@@ -43,15 +45,69 @@ class Ball {
     }
 }
 
+function clientTime() {
+    return new Date().getTime();
+}
+
+function getBaseState(states) {
+    let curTime = clientTime();
+    for (let i = states.length - 1; i >= 0; i--) {
+        if (curTime - states[i].timestamp >= RENDER_DELAY) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+function interpolate(curState, nextState, ratio) {
+    let newState = {};
+    Object.keys(curState.data).forEach(key => {
+        newState[key] =
+            curState.data[key] +
+            (nextState.data[key] - curState.data[key]) * ratio;
+    });
+    return newState;
+}
+
 class Player {
     constructor(pixi_obj) {
         this.pixi_obj = pixi_obj;
+        this.states = [];
         this.nextX = pixi_obj.x;
         this.nextY = pixi_obj.y;
     }
+
+    addState(rawState, timestamp) {
+        let state = {
+            timestamp: timestamp,
+            data: rawState,
+        };
+
+        this.states.push(state);
+    }
+
     update() {
-        this.pixi_obj.x = this.nextX;
-        this.pixi_obj.y = this.nextY;
+        let curTime = clientTime();
+        let i = getBaseState(this.states);
+
+        if (i == -1) {
+            return;
+        }
+
+        let curState = this.states[i];
+
+        if (i < this.states.length - 1) {
+            let nextState = this.states[i + 1];
+            let ratio =
+                (curTime - RENDER_DELAY - curState.timestamp) /
+                (nextState.timestamp - curState.timestamp);
+            let newState = interpolate(curState, nextState, ratio);
+            this.pixi_obj.x = newState.Xpos;
+            this.pixi_obj.y = newState.Ypos;
+        } else {
+            this.pixi_obj.x = curState.Xpos;
+            this.pixi_obj.y = curState.Ypos;
+        }
     }
     destroy() {
         this.pixi_obj.destroy();
@@ -70,13 +126,17 @@ let app = new PIXI.Application({
     resizeTo: window,
 });
 
+PIXI.settings.RESOLUTION = window.devicePixelRatio;
+
 document.body.appendChild(app.view);
 
 window.addEventListener('resize', resize);
 
 socket.onmessage = event => {
-    let ball_and_players = JSON.parse(JSON.parse(event.data).Body);
+    let rawData = JSON.parse(event.data);
+    let ball_and_players = JSON.parse(rawData.Body);
     let rawPlayerData = JSON.parse(ball_and_players.players);
+    let timestamp = JSON.parse(rawData.Timestamp);
 
     for (const key in rawPlayerData) {
         const data = rawPlayerData[key];
@@ -91,8 +151,7 @@ socket.onmessage = event => {
             );
             app.stage.addChild(players[key].pixi_obj);
         } else {
-            players[key].nextX = data.Xpos;
-            players[key].nextY = data.Ypos;
+            players[key].addState(data, timestamp);
         }
     }
     for (const key in players) {
@@ -212,7 +271,7 @@ function setup() {
 // delta is the fractional lag between frames (1) if not lagging
 function gameLoop(delta) {
     if (delta > 1.1) {
-        console.log(delta);
+        //console.log(delta);
     }
 
     for (const key of Object.keys(players)) {
