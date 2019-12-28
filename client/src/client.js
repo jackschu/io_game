@@ -5,7 +5,10 @@ const HEIGHT = 1000;
 const NEON = 0x33ff3f;
 const PERSPECTIVE_D = 250;
 const BALL_RADIUS = 50;
-const RENDER_DELAY = 100;
+const RENDER_DELAY = 50;
+
+let firstServerTimestamp;
+let gameStart;
 
 let BACK_BOX_DEPTH;
 class DepthIndicator {
@@ -32,9 +35,49 @@ class Ball {
         this.nextX = this.pixi_obj.x;
         this.nextY = this.pixi_obj.y;
         this.nextZ = depth;
+        this.states = [];
         app.stage.addChild(this.pixi_obj);
     }
+
+    addState(rawState, timestamp) {
+        if (!firstServerTimestamp) {
+            firstServerTimestamp = timestamp;
+            gameStart = new Date().getTime();
+        }
+
+        let state = {
+            timestamp: timestamp,
+            data: rawState,
+        };
+
+        this.states.push(state);
+    }
+
     update() {
+        let curTime = clientTime();
+        let i = getBaseState(this.states);
+
+        if (i == -1) {
+            return;
+        }
+
+        let curState = this.states[i];
+
+        if (i < this.states.length - 1) {
+            let nextState = this.states[i + 1];
+            let ratio =
+                (curTime - RENDER_DELAY - curState.timestamp) /
+                (nextState.timestamp - curState.timestamp);
+            let newState = interpolate(curState, nextState, ratio);
+            this.nextX = newState.Xpos;
+            this.nextY = newState.Ypos;
+            this.nextZ = newState.Zpos;
+        } else {
+            this.nextX = curState.Xpos;
+            this.nextY = curState.Ypos;
+            this.nextZ = curState.Zpos;
+        }
+
         const [x0, _] = pointProject(BALL_RADIUS + WIDTH / 2, 0, this.nextZ);
         const radius = x0 - WIDTH / 2;
         this.pixi_obj.clear();
@@ -42,11 +85,12 @@ class Ball {
         const [x, y] = pointProject(this.nextX, this.nextY, this.nextZ);
         this.pixi_obj.drawCircle(x, y, radius);
         this.pixi_obj.endFill();
+        depth_indicator.depth = ball.nextZ;
     }
 }
 
 function clientTime() {
-    return new Date().getTime();
+    return new Date().getTime() - gameStart + firstServerTimestamp;
 }
 
 function getBaseState(states) {
@@ -78,6 +122,11 @@ class Player {
     }
 
     addState(rawState, timestamp) {
+        if (!firstServerTimestamp) {
+            firstServerTimestamp = timestamp;
+            gameStart = new Date().getTime();
+        }
+
         let state = {
             timestamp: timestamp,
             data: rawState,
@@ -166,10 +215,11 @@ socket.onmessage = event => {
         console.log('new ball');
         ball = new Ball(ballData.Zpos);
     }
-    ball.nextX = ballData.Xpos;
-    ball.nextY = ballData.Ypos;
-    ball.nextZ = ballData.Zpos;
-    depth_indicator.depth = ball.nextZ;
+    //ball.nextX = ballData.Xpos;
+    //ball.nextY = ballData.Ypos;
+    //ball.nextZ = ballData.Zpos;
+    //depth_indicator.depth = ball.nextZ;
+    ball.addState(ballData, timestamp);
 };
 
 function makePlayer(x, y, size, username) {
