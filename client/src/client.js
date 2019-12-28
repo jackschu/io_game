@@ -171,7 +171,6 @@ function getLine(x0, y0, z0, x1, y1, z1) {
     return line;
 }
 function moveHandler(e) {
-    console.log(e);
     const pos = e.data.getLocalPosition(app.stage);
     const out_obj = {
         XPos: clip(pos.x, 0, WIDTH),
