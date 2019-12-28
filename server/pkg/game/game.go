@@ -5,7 +5,6 @@ import (
 	"github.com/jackschu/io_game/pkg/communication"
 	"github.com/jackschu/io_game/pkg/websocket"
 	"log"
-	"strconv"
 	"time"
 )
 
@@ -48,7 +47,6 @@ func (g *GameLoop) Start() {
 	go g.poll()
 
 	prev := time.Now()
-	speed := 0.1
 	ticker := time.NewTicker(16 * time.Millisecond)
 	for {
 		select {
@@ -56,17 +54,6 @@ func (g *GameLoop) Start() {
 			cur := time.Now()
 			dt := cur.Sub(prev).Seconds() * 1000.0
 			prev = cur
-			for _, player := range g.InfoMap {
-				if player.Direction == 0 {
-					player.Ypos -= float64(dt) * speed
-				} else if player.Direction == 1 {
-					player.Ypos += float64(dt) * speed
-				} else if player.Direction == 2 {
-					player.Xpos -= float64(dt) * speed
-				} else if player.Direction == 3 {
-					player.Xpos += float64(dt) * speed
-				}
-			}
 
 			// TODO replace hardd coded walls withshared consts
 			ball_radius := float64(50)
@@ -133,10 +120,13 @@ func (g *GameLoop) registerMove(action *communication.Action) {
 		delete(g.InfoMap, action.ID)
 		return
 	}
-	player := g.InfoMap[action.ID]
-	move_int, err := strconv.Atoi(move)
-	player.Direction = move_int
-	if err != nil {
-		log.Println(err)
+
+	if json.Valid([]byte(move)) {
+		json.Unmarshal([]byte(move), g.InfoMap[action.ID])
+
+	} else {
+		log.Println("got invalid JSON " + move)
+
 	}
+
 }
