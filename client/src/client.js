@@ -271,6 +271,7 @@ function getLine(x0, y0, z0, x1, y1, z1) {
 }
 
 function moveHandler(e) {
+    console.log('mousedown');
     let now = new Date().getTime();
     if (lastSendTimestamp && now - lastSendTimestamp < 1000 / SEND_FPS) {
         //@nomaster uncomment this, currently commented for debugging interpolation
@@ -290,7 +291,9 @@ function moveHandler(e) {
 function setup() {
     app.stage.interactive = true;
     //app.renderer.plugins.interaction.interactionFrequency = 500;
-    app.stage.on('pointermove', moveHandler);
+    //app.stage.on('pointermove', moveHandler);
+
+    app.stage.pointerdown = moveHandler;
     // DEBUG corners for debugging
     let corner = new PIXI.Graphics().beginFill(0xff0000).drawRect(0, 0, 10, 10);
     app.stage.addChild(corner);
@@ -358,7 +361,7 @@ function gameLoop(delta) {
             last_good = new Date().getTime();
         }
         if (last_bad - last_good > 0) {
-            console.log(last_bad - last_good);
+            console.log('out of sync for: ', last_bad - last_good, 'ms');
         }
     }
 
@@ -379,7 +382,7 @@ function resize() {
     );
     app.renderer.resize(window.innerWidth, window.innerHeight);
     app.stage.scale.x = app.stage.scale.y = ratio;
-
+    app.stage.hitArea = new PIXI.Rectangle(0, 0, 10000, 10000);
     // TODO Move container to the center
     // app.stage.x = app.screen.width / 5;
     // app.stage.y = app.screen.height / 5;
