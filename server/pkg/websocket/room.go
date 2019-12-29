@@ -3,6 +3,7 @@ package websocket
 import (
 	"fmt"
 	"github.com/jackschu/io_game/pkg/communication"
+	"time"
 )
 
 type Room struct {
@@ -14,7 +15,15 @@ type Room struct {
 }
 
 type Message struct {
-	Body string
+	Body      string
+	Timestamp int64
+}
+
+func NewMessage(body string) *Message {
+	return &Message{
+		Body:      body,
+		Timestamp: time.Now().UnixNano() / 1000000,
+	}
 }
 
 func NewRoom() *Room {
