@@ -252,7 +252,10 @@ function resize() {
     );
     app.renderer.resize(window.innerWidth, window.innerHeight);
     app.stage.scale.x = app.stage.scale.y = ratio;
-    PLAYER_SIZE = (app.screen.height * VIRTUAL_PLAYER_SIZE) / HEIGHT / ratio;
+    PLAYER_SIZE = Math.min(
+        (app.screen.height * VIRTUAL_PLAYER_SIZE) / HEIGHT / ratio,
+        (app.screen.width * VIRTUAL_PLAYER_SIZE) / WIDTH / ratio
+    );
 
     // TODO Move container to the center
     // app.stage.x = app.screen.width / 5;
