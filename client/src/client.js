@@ -26,66 +26,66 @@ class DepthIndicator {
     }
 }
 
+const ballStates = [];
+const playerStates = {};
+
+function addState(rawState, timestamp, stateArr) {
+    if (!firstServerTimestamp) {
+        firstServerTimestamp = timestamp;
+        gameStart = new Date().getTime();
+    }
+
+    let state = {
+        timestamp: timestamp,
+        data: rawState,
+    };
+
+    stateArr.push(state);
+}
+
+function generateCurrentState(stateArr) {
+    let curTime = clientTime();
+    let i = getBaseState(stateArr);
+
+    if (i == -1) {
+        return null;
+    }
+
+    let curState = stateArr[i];
+    if (i < stateArr.length - 1) {
+        let nextState = stateArr[i + 1];
+        let ratio =
+            (curTime - RENDER_DELAY - curState.timestamp) /
+            (nextState.timestamp - curState.timestamp);
+        return interpolate(curState, nextState, ratio);
+    } else {
+        return curState;
+    }
+}
+
 class Ball {
-    constructor(depth) {
-        this.pixi_obj = new PIXI.Graphics().beginFill(0xff0000);
-        const [x0, _] = pointProject(BALL_RADIUS + WIDTH / 2, 0, depth);
-        const radius = x0 - WIDTH / 2;
-        this.pixi_obj.drawCircle(WIDTH / 2, HEIGHT / 2, radius);
-        this.nextX = this.pixi_obj.x;
-        this.nextY = this.pixi_obj.y;
-        this.nextZ = depth;
-        this.states = [];
+    constructor() {
+        this.pixi_obj = new PIXI.Graphics();
         app.stage.addChild(this.pixi_obj);
     }
 
-    addState(rawState, timestamp) {
-        if (!firstServerTimestamp) {
-            firstServerTimestamp = timestamp;
-            gameStart = new Date().getTime();
-        }
-
-        let state = {
-            timestamp: timestamp,
-            data: rawState,
-        };
-
-        this.states.push(state);
-    }
-
     update() {
-        let curTime = clientTime();
-        let i = getBaseState(this.states);
-
-        if (i == -1) {
+        const curState = generateCurrentState(ballStates);
+        if (curState === null) {
             return;
         }
-
-        let curState = this.states[i];
-
-        if (i < this.states.length - 1) {
-            let nextState = this.states[i + 1];
-            let ratio =
-                (curTime - RENDER_DELAY - curState.timestamp) /
-                (nextState.timestamp - curState.timestamp);
-            let newState = interpolate(curState, nextState, ratio);
-            this.nextX = newState.Xpos;
-            this.nextY = newState.Ypos;
-            this.nextZ = newState.Zpos;
-        } else {
-            this.nextX = curState.Xpos;
-            this.nextY = curState.Ypos;
-            this.nextZ = curState.Zpos;
-        }
-
-        const [x0, _] = pointProject(BALL_RADIUS + WIDTH / 2, 0, this.nextZ);
+        const [x0, _] = pointProject(BALL_RADIUS + WIDTH / 2, 0, curState.Zpos);
         const radius = x0 - WIDTH / 2;
         this.pixi_obj.clear();
         this.pixi_obj.beginFill(0xff0000);
-        const [x, y] = pointProject(this.nextX, this.nextY, this.nextZ);
+        const [x, y] = pointProject(
+            curState.Xpos,
+            curState.Ypos,
+            curState.Zpos
+        );
         this.pixi_obj.drawCircle(x, y, radius);
         this.pixi_obj.endFill();
-        depth_indicator.depth = ball.nextZ;
+        depth_indicator.depth = curState.Zpos;
     }
 }
 
@@ -114,52 +114,35 @@ function interpolate(curState, nextState, ratio) {
 }
 
 class Player {
-    constructor(pixi_obj) {
-        this.pixi_obj = pixi_obj;
-        this.states = [];
-        this.nextX = pixi_obj.x;
-        this.nextY = pixi_obj.y;
-    }
-
-    addState(rawState, timestamp) {
-        if (!firstServerTimestamp) {
-            firstServerTimestamp = timestamp;
-            gameStart = new Date().getTime();
-        }
-
-        let state = {
-            timestamp: timestamp,
-            data: rawState,
-        };
-
-        this.states.push(state);
+    constructor(username) {
+        this.pixi_obj = new PIXI.Graphics()
+            .beginFill(0xff0000)
+            .drawRect(0, 0, PLAYER_SIZE, PLAYER_SIZE);
+        this.username = username;
+        const name = new PIXI.Text(username.substring(0, 5), {
+            fontFamily: 'Arial',
+            fontSize: 24,
+            fill: 'white',
+            align: 'right',
+        });
+        name.anchor.set(0.5, 0.5);
+        name.position.set(PLAYER_SIZE / 2, PLAYER_SIZE / 2);
+        this.pixi_obj.addChild(name);
+        playerStates[username] = [];
+        app.stage.addChild(this.pixi_obj);
     }
 
     update() {
-        let curTime = clientTime();
-        let i = getBaseState(this.states);
-
-        if (i == -1) {
+        const curState = generateCurrentState(playerStates[this.username]);
+        if (curState === null) {
             return;
         }
-
-        let curState = this.states[i];
-
-        if (i < this.states.length - 1) {
-            let nextState = this.states[i + 1];
-            let ratio =
-                (curTime - RENDER_DELAY - curState.timestamp) /
-                (nextState.timestamp - curState.timestamp);
-            let newState = interpolate(curState, nextState, ratio);
-            this.pixi_obj.x = newState.Xpos;
-            this.pixi_obj.y = newState.Ypos;
-        } else {
-            this.pixi_obj.x = curState.Xpos;
-            this.pixi_obj.y = curState.Ypos;
-        }
+        this.pixi_obj.x = curState.Xpos;
+        this.pixi_obj.y = curState.Ypos;
     }
     destroy() {
         this.pixi_obj.destroy();
+        delete playerStates[this.username];
     }
 }
 
@@ -190,18 +173,9 @@ socket.onmessage = event => {
     for (const key in rawPlayerData) {
         const data = rawPlayerData[key];
         if (players[key] === undefined) {
-            players[key] = new Player(
-                makePlayer(
-                    data.Xpos,
-                    data.Ypos,
-                    PLAYER_SIZE,
-                    key.substring(0, 5)
-                )
-            );
-            app.stage.addChild(players[key].pixi_obj);
-        } else {
-            players[key].addState(data, timestamp);
+            players[key] = new Player(key);
         }
+        addState(data, timestamp, playerStates[key]);
     }
     for (const key in players) {
         if (rawPlayerData[key] === undefined) {
@@ -215,30 +189,8 @@ socket.onmessage = event => {
         console.log('new ball');
         ball = new Ball(ballData.Zpos);
     }
-    //ball.nextX = ballData.Xpos;
-    //ball.nextY = ballData.Ypos;
-    //ball.nextZ = ballData.Zpos;
-    //depth_indicator.depth = ball.nextZ;
-    ball.addState(ballData, timestamp);
+    addState(ballData, timestamp, ballStates);
 };
-
-function makePlayer(x, y, size, username) {
-    var name = new PIXI.Text(username, {
-        fontFamily: 'Arial',
-        fontSize: 24,
-        fill: 'white',
-        align: 'right',
-    });
-    name.anchor.set(0.5, 0.5);
-    name.position.set(size / 2, size / 2);
-    const rect = new PIXI.Graphics()
-        .beginFill(0xff0000)
-        .drawRect(0, 0, size, size);
-
-    rect.position.set(x - size / 2, y - size / 2);
-    rect.addChild(name);
-    return rect;
-}
 
 function pointProject(x, y, z) {
     let x_0 = WIDTH / 2;
@@ -321,7 +273,7 @@ function setup() {
 // delta is the fractional lag between frames (1) if not lagging
 function gameLoop(delta) {
     if (delta > 1.1) {
-        //console.log(delta);
+        console.log(delta);
     }
 
     for (const key of Object.keys(players)) {
