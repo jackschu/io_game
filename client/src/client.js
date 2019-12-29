@@ -7,9 +7,12 @@ const PERSPECTIVE_D = 250;
 const BALL_RADIUS = 50;
 const PLAYER_SIZE = 200;
 const RENDER_DELAY = 50;
+const SEND_FPS = 60;
 
+let lastSendTimestamp;
 let firstServerTimestamp;
 let gameStart;
+let undelayedPlayer;
 
 let BACK_BOX_DEPTH;
 class DepthIndicator {
@@ -96,6 +99,7 @@ function clientTime() {
 
 function getBaseState(states) {
     let curTime = clientTime();
+
     for (let i = states.length - 1; i >= 0; i--) {
         if (curTime - states[i].timestamp >= RENDER_DELAY) {
             return i;
@@ -147,11 +151,30 @@ class Player {
     }
 }
 
+class DebugPlayer {
+    constructor() {
+        this.pixi_obj = new PIXI.Graphics()
+            .lineStyle(2, 0x0000ff, 1)
+            .beginFill(0, 0)
+            .drawRect(0, 0, PLAYER_SIZE, PLAYER_SIZE)
+            .endFill();
+        app.stage.addChild(this.pixi_obj);
+    }
+    update() {
+        this.pixi_obj.x = this.nextX - PLAYER_SIZE / 2;
+        this.pixi_obj.y = this.nextY - PLAYER_SIZE / 2;
+    }
+    destroy() {
+        this.pixi_obj.destroy();
+    }
+}
+
 function clip(number, min, max) {
     return Math.max(min, Math.min(number, max));
 }
 
 const players = {};
+const debugPlayers = {};
 let ball;
 let depth_indicator;
 
@@ -185,6 +208,21 @@ socket.onmessage = event => {
         if (rawPlayerData[key] === undefined) {
             players[key].destroy();
             delete players[key];
+        }
+    }
+
+    for (const key in rawPlayerData) {
+        const data = rawPlayerData[key];
+        if (debugPlayers[key] === undefined) {
+            debugPlayers[key] = new DebugPlayer(key);
+        }
+        debugPlayers[key].nextX = data.Xpos;
+        debugPlayers[key].nextY = data.Ypos;
+    }
+    for (const key in debugPlayers) {
+        if (rawPlayerData[key] === undefined) {
+            debugPlayers[key].destroy();
+            delete debugPlayers[key];
         }
     }
 
@@ -231,7 +269,15 @@ function getLine(x0, y0, z0, x1, y1, z1) {
     line.lineTo(x1_out, y1_out);
     return line;
 }
+
 function moveHandler(e) {
+    let now = new Date().getTime();
+    if (lastSendTimestamp && now - lastSendTimestamp < 1000 / SEND_FPS) {
+        //@nomaster uncomment this, currently commented for debugging interpolation
+        //return;
+    }
+    lastSendTimestamp = now;
+
     const pos = e.data.getLocalPosition(app.stage);
     const out_obj = {
         XPos: clip(pos.x, 0, WIDTH),
@@ -240,6 +286,7 @@ function moveHandler(e) {
     const out = JSON.stringify(out_obj);
     socket.send(out);
 }
+
 function setup() {
     app.stage.interactive = true;
     //app.renderer.plugins.interaction.interactionFrequency = 500;
@@ -286,6 +333,8 @@ function setup() {
 }
 
 // delta is the fractional lag between frames (1) if not lagging
+let last_good;
+let last_bad;
 function gameLoop(delta) {
     if (delta > 1.1) {
         console.log(delta);
@@ -293,6 +342,24 @@ function gameLoop(delta) {
 
     for (const key of Object.keys(players)) {
         players[key].update();
+    }
+
+    for (const key of Object.keys(debugPlayers)) {
+        debugPlayers[key].update();
+    }
+
+    for (const key of Object.keys(debugPlayers)) {
+        if (
+            debugPlayers[key].pixi_obj.x != players[key].pixi_obj.x ||
+            debugPlayers[key].pixi_obj.y != players[key].pixi_obj.y
+        ) {
+            last_bad = new Date().getTime();
+        } else {
+            last_good = new Date().getTime();
+        }
+        if (last_bad - last_good > 0) {
+            console.log(last_bad - last_good);
+        }
     }
 
     if (ball) {
