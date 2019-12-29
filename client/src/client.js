@@ -10,8 +10,7 @@ const RENDER_DELAY = 50;
 const SEND_FPS = 60;
 
 let lastSendTimestamp;
-let firstServerTimestamp;
-let gameStart;
+let serverClientGap;
 let undelayedPlayer;
 
 let BACK_BOX_DEPTH;
@@ -34,10 +33,7 @@ const ballStates = [];
 const playerStates = {};
 
 function addState(rawState, timestamp, stateArr) {
-    if (!firstServerTimestamp) {
-        firstServerTimestamp = timestamp;
-        gameStart = new Date().getTime();
-    }
+    serverClientGap = timestamp - new Date().getTime();
 
     let state = {
         timestamp: timestamp,
@@ -45,24 +41,29 @@ function addState(rawState, timestamp, stateArr) {
     };
 
     stateArr.push(state);
+    const base = getBaseState(stateArr);
+    if (base > 0) {
+        stateArr.splice(0, base);
+    }
 }
 
 function generateCurrentState(stateArr) {
-    let curTime = clientTime();
     let i = getBaseState(stateArr);
+    let curTime = clientTime();
 
     if (i == -1) {
         return null;
     }
-
     let curState = stateArr[i];
     if (i < stateArr.length - 1) {
         let nextState = stateArr[i + 1];
         let ratio =
             (curTime - RENDER_DELAY - curState.timestamp) /
             (nextState.timestamp - curState.timestamp);
+        //console.log(curTime - RENDER_DELAY - curState.timestamp);
         return interpolate(curState, nextState, ratio);
     } else {
+        console.log('what');
         return curState;
     }
 }
@@ -94,7 +95,7 @@ class Ball {
 }
 
 function clientTime() {
-    return new Date().getTime() - gameStart + firstServerTimestamp;
+    return new Date().getTime() + serverClientGap;
 }
 
 function getBaseState(states) {
@@ -271,7 +272,6 @@ function getLine(x0, y0, z0, x1, y1, z1) {
 }
 
 function moveHandler(e) {
-    console.log('mousedown');
     let now = new Date().getTime();
     if (lastSendTimestamp && now - lastSendTimestamp < 1000 / SEND_FPS) {
         //@nomaster uncomment this, currently commented for debugging interpolation
@@ -291,8 +291,7 @@ function moveHandler(e) {
 function setup() {
     app.stage.interactive = true;
     //app.renderer.plugins.interaction.interactionFrequency = 500;
-    //app.stage.on('pointermove', moveHandler);
-
+    app.stage.on('pointermove', moveHandler);
     app.stage.pointerdown = moveHandler;
     // DEBUG corners for debugging
     let corner = new PIXI.Graphics().beginFill(0xff0000).drawRect(0, 0, 10, 10);
