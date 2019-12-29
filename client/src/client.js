@@ -154,7 +154,8 @@ let depth_indicator;
 let app = new PIXI.Application({
     antialias: true, // default: false
     transparent: false, // default: false
-    resolution: 1, // default: 1
+    autoDensity: true,
+    resolution: window.devicePixelRatio,
     resizeTo: window,
 });
 
