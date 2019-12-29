@@ -7,8 +7,7 @@ const PERSPECTIVE_D = 250;
 const BALL_RADIUS = 50;
 const RENDER_DELAY = 50;
 
-let firstServerTimestamp;
-let gameStart;
+let serverClientGap;
 
 let BACK_BOX_DEPTH;
 class DepthIndicator {
@@ -30,10 +29,7 @@ const ballStates = [];
 const playerStates = {};
 
 function addState(rawState, timestamp, stateArr) {
-    if (!firstServerTimestamp) {
-        firstServerTimestamp = timestamp;
-        gameStart = new Date().getTime();
-    }
+    serverClientGap = timestamp - new Date().getTime();
 
     let state = {
         timestamp: timestamp,
@@ -41,6 +37,10 @@ function addState(rawState, timestamp, stateArr) {
     };
 
     stateArr.push(state);
+    const base = getBaseState(stateArr);
+    if (base > 0) {
+        stateArr.splice(0, base);
+    }
 }
 
 function generateCurrentState(stateArr) {
@@ -90,7 +90,7 @@ class Ball {
 }
 
 function clientTime() {
-    return new Date().getTime() - gameStart + firstServerTimestamp;
+    return new Date().getTime() + serverClientGap;
 }
 
 function getBaseState(states) {
