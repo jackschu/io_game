@@ -5,8 +5,8 @@ import (
 	"github.com/jackschu/io_game/pkg/communication"
 	"github.com/jackschu/io_game/pkg/websocket"
 	"log"
-	"sync/atomic"
 	"math"
+	"sync/atomic"
 	"time"
 )
 
@@ -58,7 +58,7 @@ func playerBallCollide(player *PlayerInfo, ball *BallInfo) bool {
 	return (deltaX*deltaX + deltaY*deltaY) < (circle_radius * circle_radius)
 }
 
-func (g *GameLoop) Start() {	
+func (g *GameLoop) Start() {
 	prev := time.Now()
 	ticker := time.NewTicker(16 * time.Millisecond)
 	for {

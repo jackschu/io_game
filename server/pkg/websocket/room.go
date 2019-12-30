@@ -4,16 +4,16 @@ import (
 	"fmt"
 	"github.com/jackschu/io_game/pkg/communication"
 	"log"
-	"time"
 	"sync/atomic"
+	"time"
 )
 
 type Room struct {
-	Joining   chan *Client
-	Leaving   chan *Client
-	Clients   map[*Client]bool
-	Broadcast chan Message
-	Actions   chan *communication.Action
+	Joining     chan *Client
+	Leaving     chan *Client
+	Clients     map[*Client]bool
+	Broadcast   chan Message
+	Actions     chan *communication.Action
 	PlayerCount uint32
 }
 
