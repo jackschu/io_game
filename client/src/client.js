@@ -8,7 +8,9 @@ const BALL_RADIUS = 50;
 const VIRTUAL_PLAYER_SIZE = 200; // what we think of it as
 let PLAYER_SIZE; // what we tell pixi
 const RENDER_DELAY = 50;
+const SEND_FPS = 60;
 
+let lastSendTimestamp;
 let serverClientGap;
 
 let BACK_BOX_DEPTH;
@@ -234,6 +236,11 @@ function getLine(x0, y0, z0, x1, y1, z1) {
     return line;
 }
 function moveHandler(e) {
+    let now = new Date().getTime();
+    if (lastSendTimestamp && now - lastSendTimestamp < 1000 / SEND_FPS) {
+        return;
+    }
+    lastSendTimestamp = now;
     const pos = e.data.getLocalPosition(app.stage);
     const out_obj = {
         XPos: clip(pos.x, 0, WIDTH),
