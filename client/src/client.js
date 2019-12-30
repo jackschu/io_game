@@ -5,6 +5,7 @@ const HEIGHT = 1000;
 const NEON = 0x33ff3f;
 const PERSPECTIVE_D = 250;
 const BALL_RADIUS = 50;
+const PLAYER_SIZE = 200;
 const RENDER_DELAY = 50;
 
 let serverClientGap;
@@ -137,8 +138,8 @@ class Player {
         if (curState === null) {
             return;
         }
-        this.pixi_obj.x = curState.Xpos;
-        this.pixi_obj.y = curState.Ypos;
+        this.pixi_obj.x = curState.Xpos - PLAYER_SIZE / 2;
+        this.pixi_obj.y = curState.Ypos - PLAYER_SIZE / 2;
     }
     destroy() {
         this.pixi_obj.destroy();
@@ -146,7 +147,10 @@ class Player {
     }
 }
 
-const PLAYER_SIZE = 200;
+function clip(number, min, max) {
+    return Math.max(min, Math.min(number, max));
+}
+
 const players = {};
 let ball;
 let depth_indicator;
@@ -228,8 +232,19 @@ function getLine(x0, y0, z0, x1, y1, z1) {
     line.lineTo(x1_out, y1_out);
     return line;
 }
-
+function moveHandler(e) {
+    const pos = e.data.getLocalPosition(app.stage);
+    const out_obj = {
+        XPos: clip(pos.x, 0, WIDTH),
+        YPos: clip(pos.y, 0, HEIGHT),
+    };
+    const out = JSON.stringify(out_obj);
+    socket.send(out);
+}
 function setup() {
+    app.stage.interactive = true;
+    //app.renderer.plugins.interaction.interactionFrequency = 500;
+    app.stage.on('pointermove', moveHandler);
     // DEBUG corners for debugging
     let corner = new PIXI.Graphics().beginFill(0xff0000).drawRect(0, 0, 10, 10);
     app.stage.addChild(corner);
