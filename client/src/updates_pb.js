@@ -158,7 +158,7 @@ proto.GameState.deserializeBinaryFromReader = function(msg, reader) {
     case 2:
       var value = msg.getPlayersMap();
       reader.readMessage(value, function(message, reader) {
-        jspb.Map.deserializeBinary(message, reader, jspb.BinaryReader.prototype.readString, jspb.BinaryReader.prototype.readMessage, proto.Player.deserializeBinaryFromReader, "");
+        jspb.Map.deserializeBinary(message, reader, jspb.BinaryReader.prototype.readUint32, jspb.BinaryReader.prototype.readMessage, proto.Player.deserializeBinaryFromReader, 0);
          });
       break;
     case 3:
@@ -204,7 +204,7 @@ proto.GameState.serializeBinaryToWriter = function(message, writer) {
   }
   f = message.getPlayersMap(true);
   if (f && f.getLength() > 0) {
-    f.serializeBinary(2, writer, jspb.BinaryWriter.prototype.writeString, jspb.BinaryWriter.prototype.writeMessage, proto.Player.serializeBinaryToWriter);
+    f.serializeBinary(2, writer, jspb.BinaryWriter.prototype.writeUint32, jspb.BinaryWriter.prototype.writeMessage, proto.Player.serializeBinaryToWriter);
   }
   f = message.getTimestamp();
   if (f !== 0) {
@@ -250,13 +250,13 @@ proto.GameState.prototype.hasBall = function() {
 
 
 /**
- * map<string, Player> players = 2;
+ * map<uint32, Player> players = 2;
  * @param {boolean=} opt_noLazyCreate Do not create the map if
  * empty, instead returning `undefined`
- * @return {!jspb.Map<string,!proto.Player>}
+ * @return {!jspb.Map<number,!proto.Player>}
  */
 proto.GameState.prototype.getPlayersMap = function(opt_noLazyCreate) {
-  return /** @type {!jspb.Map<string,!proto.Player>} */ (
+  return /** @type {!jspb.Map<number,!proto.Player>} */ (
       jspb.Message.getMapField(this, 2, opt_noLazyCreate,
       proto.Player));
 };

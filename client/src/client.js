@@ -123,8 +123,8 @@ class Player {
         this.pixi_obj = new PIXI.Graphics()
             .beginFill(0xff0000, 0.3)
             .drawRect(0, 0, PLAYER_SIZE, PLAYER_SIZE);
-        this.username = username;
-        const name = new PIXI.Text(username.substring(0, 5), {
+        this.username = String(username);
+        const name = new PIXI.Text(String(username), {
             fontFamily: 'Arial',
             fontSize: 24,
             fill: 'white',
@@ -177,16 +177,18 @@ socket.onmessage = event => {
     var fileReader = new FileReader();
     fileReader.onload = function() {
         let pb_state = updates.GameState.deserializeBinary(this.result);
+
         let pb_object = pb_state.toObject();
         let timestamp = pb_object.timestamp;
         let rawPlayerData = pb_object.playersMap;
+
         let incoming_players = new Set();
-        for (const [key, data] of rawPlayerData) {
+        for (const [key_i, data] of rawPlayerData) {
+            let key = String(key_i);
             incoming_players.add(key);
             if (players[key] === undefined) {
                 players[key] = new Player(key);
             }
-
             addState(data, timestamp, playerStates[key]);
         }
 

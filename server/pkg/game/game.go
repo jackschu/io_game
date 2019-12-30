@@ -25,14 +25,14 @@ func NewBallInfo() *pb.Ball {
 
 type GameLoop struct {
 	Room    *websocket.Room
-	InfoMap map[string]*pb.Player
+	InfoMap map[uint32]*pb.Player
 	Ball    *pb.Ball
 }
 
 func NewGameLoop(room *websocket.Room) *GameLoop {
 	return &GameLoop{
 		Room:    room,
-		InfoMap: make(map[string]*pb.Player),
+		InfoMap: make(map[uint32]*pb.Player),
 		Ball:    NewBallInfo(),
 	}
 }
