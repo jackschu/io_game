@@ -120,7 +120,7 @@ func (g *GameLoop) Start() {
 			if err != nil {
 				log.Println(err)
 			} else {
-				g.Room.Broadcast <- websocket.Message{Body: string(json_out)}
+				g.Room.Broadcast <- *websocket.NewMessage(string(json_out))
 			}
 		}
 

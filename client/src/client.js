@@ -7,6 +7,10 @@ const PERSPECTIVE_D = 250;
 const BALL_RADIUS = 50;
 const VIRTUAL_PLAYER_SIZE = 200; // what we think of it as
 let PLAYER_SIZE; // what we tell pixi
+const RENDER_DELAY = 50;
+
+let serverClientGap;
+
 let BACK_BOX_DEPTH;
 class DepthIndicator {
     constructor(pixi_obj) {
@@ -23,40 +27,124 @@ class DepthIndicator {
     }
 }
 
-class Ball {
-    constructor(depth) {
-        this.pixi_obj = new PIXI.Graphics().beginFill(0xff0000);
-        const [x0, _] = pointProject(BALL_RADIUS + WIDTH / 2, 0, depth);
-        const radius = x0 - WIDTH / 2;
-        this.pixi_obj.drawCircle(WIDTH / 2, HEIGHT / 2, radius);
-        this.nextX = this.pixi_obj.x;
-        this.nextY = this.pixi_obj.y;
-        this.nextZ = depth;
-        app.stage.addChild(this.pixi_obj);
-    }
-    update() {
-        const [x0, _] = pointProject(BALL_RADIUS + WIDTH / 2, 0, this.nextZ);
-        const radius = x0 - WIDTH / 2;
-        this.pixi_obj.clear();
-        this.pixi_obj.beginFill(0xff0000);
-        const [x, y] = pointProject(this.nextX, this.nextY, this.nextZ);
-        this.pixi_obj.drawCircle(x, y, radius);
-        this.pixi_obj.endFill();
+const ballStates = [];
+const playerStates = {};
+
+function addState(rawState, timestamp, stateArr) {
+    serverClientGap = timestamp - new Date().getTime();
+
+    let state = {
+        timestamp: timestamp,
+        data: rawState,
+    };
+
+    stateArr.push(state);
+    const base = getBaseState(stateArr);
+    if (base > 0) {
+        stateArr.splice(0, base);
     }
 }
 
-class Player {
-    constructor(pixi_obj) {
-        this.pixi_obj = pixi_obj;
-        this.nextX = pixi_obj.x;
-        this.nextY = pixi_obj.y;
+function generateCurrentState(stateArr) {
+    let curTime = clientTime();
+    let i = getBaseState(stateArr);
+
+    if (i == -1) {
+        return null;
     }
+
+    let curState = stateArr[i];
+    if (i < stateArr.length - 1) {
+        let nextState = stateArr[i + 1];
+        let ratio =
+            (curTime - RENDER_DELAY - curState.timestamp) /
+            (nextState.timestamp - curState.timestamp);
+        return interpolate(curState, nextState, ratio);
+    } else {
+        return curState;
+    }
+}
+
+class Ball {
+    constructor() {
+        this.pixi_obj = new PIXI.Graphics();
+        app.stage.addChild(this.pixi_obj);
+    }
+
     update() {
-        this.pixi_obj.x = this.nextX - PLAYER_SIZE / 2;
-        this.pixi_obj.y = this.nextY - PLAYER_SIZE / 2;
+        const curState = generateCurrentState(ballStates);
+        if (curState === null) {
+            return;
+        }
+        const [x0, _] = pointProject(BALL_RADIUS + WIDTH / 2, 0, curState.Zpos);
+        const radius = x0 - WIDTH / 2;
+        this.pixi_obj.clear();
+        this.pixi_obj.beginFill(0xff0000);
+        const [x, y] = pointProject(
+            curState.Xpos,
+            curState.Ypos,
+            curState.Zpos
+        );
+        this.pixi_obj.drawCircle(x, y, radius);
+        this.pixi_obj.endFill();
+        depth_indicator.depth = curState.Zpos;
+    }
+}
+
+function clientTime() {
+    return new Date().getTime() + serverClientGap;
+}
+
+function getBaseState(states) {
+    let curTime = clientTime();
+    for (let i = states.length - 1; i >= 0; i--) {
+        if (curTime - states[i].timestamp >= RENDER_DELAY) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+function interpolate(curState, nextState, ratio) {
+    let newState = {};
+    Object.keys(curState.data).forEach(key => {
+        newState[key] =
+            curState.data[key] +
+            (nextState.data[key] - curState.data[key]) * ratio;
+    });
+    return newState;
+}
+
+class Player {
+    constructor(username) {
+        this.pixi_obj = new PIXI.Graphics()
+            .beginFill(0xff0000)
+            .drawRect(0, 0, PLAYER_SIZE, PLAYER_SIZE);
+        this.username = username;
+        const name = new PIXI.Text(username.substring(0, 5), {
+            fontFamily: 'Arial',
+            fontSize: 24,
+            fill: 'white',
+            align: 'right',
+        });
+        name.anchor.set(0.5, 0.5);
+        name.position.set(PLAYER_SIZE / 2, PLAYER_SIZE / 2);
+        this.pixi_obj.addChild(name);
+        playerStates[username] = [];
+        app.stage.addChild(this.pixi_obj);
+    }
+
+    update() {
+        const curState = generateCurrentState(playerStates[this.username]);
+        if (curState === null) {
+            return;
+        }
+        this.pixi_obj.x = curState.Xpos - PLAYER_SIZE / 2;
+        this.pixi_obj.y = curState.Ypos - PLAYER_SIZE / 2;
     }
     destroy() {
         this.pixi_obj.destroy();
+        delete playerStates[this.username];
     }
 }
 
@@ -71,34 +159,29 @@ let depth_indicator;
 let app = new PIXI.Application({
     antialias: true, // default: false
     transparent: false, // default: false
-    resolution: 1, // default: 1
+    autoDensity: true,
+    resolution: window.devicePixelRatio,
     resizeTo: window,
 });
+
+PIXI.settings.RESOLUTION = window.devicePixelRatio;
 
 document.body.appendChild(app.view);
 
 window.addEventListener('resize', resize);
 
 socket.onmessage = event => {
-    let ball_and_players = JSON.parse(JSON.parse(event.data).Body);
+    let rawData = JSON.parse(event.data);
+    let ball_and_players = JSON.parse(rawData.Body);
     let rawPlayerData = JSON.parse(ball_and_players.players);
+    let timestamp = JSON.parse(rawData.Timestamp);
 
     for (const key in rawPlayerData) {
         const data = rawPlayerData[key];
         if (players[key] === undefined) {
-            players[key] = new Player(
-                makePlayer(
-                    data.Xpos,
-                    data.Ypos,
-                    PLAYER_SIZE,
-                    key.substring(0, 5)
-                )
-            );
-            app.stage.addChild(players[key].pixi_obj);
-        } else {
-            players[key].nextX = data.Xpos;
-            players[key].nextY = data.Ypos;
+            players[key] = new Player(key);
         }
+        addState(data, timestamp, playerStates[key]);
     }
     for (const key in players) {
         if (rawPlayerData[key] === undefined) {
@@ -112,29 +195,8 @@ socket.onmessage = event => {
         console.log('new ball');
         ball = new Ball(ballData.Zpos);
     }
-    ball.nextX = ballData.Xpos;
-    ball.nextY = ballData.Ypos;
-    ball.nextZ = ballData.Zpos;
-    depth_indicator.depth = ball.nextZ;
+    addState(ballData, timestamp, ballStates);
 };
-
-function makePlayer(x, y, size, username) {
-    var name = new PIXI.Text(username, {
-        fontFamily: 'Arial',
-        fontSize: 24,
-        fill: 'white',
-        align: 'right',
-    });
-    name.anchor.set(0.5, 0.5);
-    name.position.set(size / 2, size / 2);
-    const rect = new PIXI.Graphics()
-        .beginFill(0xff0000, 0.3)
-        .drawRect(0, 0, size, size);
-
-    rect.position.set(x - size / 2, y - size / 2);
-    rect.addChild(name);
-    return rect;
-}
 
 function pointProject(x, y, z) {
     let x_0 = WIDTH / 2;
