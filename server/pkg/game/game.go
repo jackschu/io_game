@@ -64,10 +64,18 @@ func playerBallCollide(player *PlayerInfo, ball *BallInfo) bool {
 }
 
 func applySpin(ball *BallInfo) {
-	multiple := .0004
+	multiple := 0.0004
 	ball.Yvel += (ball.Yang * ball.Zvel) * multiple
 	ball.Xvel += -(ball.Xang * ball.Zvel) * multiple
-	//ball.Zvel += 0.3 * (ball.Yang*ball.Xvel - ball.Xang*ball.Yvel) * multiple
+	ball.Zvel += (ball.Yang*ball.Xvel - ball.Xang*ball.Yvel) * multiple * 0.05
+}
+
+func resetVel(ball *BallInfo) {
+	ball.Xang = 0
+	ball.Yang = 0
+	ball.Xvel = 0.3
+	ball.Yvel = 0.3
+	ball.Zvel = 0.3
 }
 
 func (g *GameLoop) Start() {
@@ -100,11 +108,7 @@ func (g *GameLoop) Start() {
 					g.Ball.Zvel *= -1
 				} else {
 					g.Ball.Zpos = 800
-					g.Ball.Xang = 0
-					g.Ball.Yang = 0
-					g.Ball.Xvel = 0.3
-					g.Ball.Yvel = 0.3
-					g.Ball.Zvel = 0.3
+					resetVel(g.Ball)
 				}
 			}
 
