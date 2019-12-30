@@ -9,6 +9,7 @@ const VIRTUAL_PLAYER_SIZE = 200; // what we think of it as
 let PLAYER_SIZE; // what we tell pixi
 const RENDER_DELAY = 50;
 const SEND_FPS = 60;
+
 var updates = require('./updates_pb');
 
 let lastSendTimestamp;
@@ -64,7 +65,7 @@ function generateCurrentState(stateArr) {
             (nextState.timestamp - curState.timestamp);
         return interpolate(curState, nextState, ratio);
     } else {
-        return curState;
+        return curState.data;
     }
 }
 
