@@ -4,14 +4,12 @@ import (
 	"encoding/json"
 	"github.com/golang/protobuf/proto"
 	"github.com/jackschu/io_game/pkg/communication"
-	"github.com/jackschu/io_game/pkg/websocket"
 	pb "github.com/jackschu/io_game/pkg/proto"
+	"github.com/jackschu/io_game/pkg/websocket"
 	"log"
 	"sync/atomic"
 	"time"
-	
 )
-
 
 // TODO replace cwith constant vars
 func NewBallInfo() *pb.Ball {
@@ -39,14 +37,14 @@ func NewGameLoop(room *websocket.Room) *GameLoop {
 	}
 }
 
-func max(x,y float32) float32 {
+func max(x, y float32) float32 {
 	if x > y {
 		return x
 	}
 	return y
 }
 
-func min(x,y float32) float32 {
+func min(x, y float32) float32 {
 	if x > y {
 		return y
 	}
@@ -109,23 +107,14 @@ func (g *GameLoop) Start() {
 
 			g.Ball.Xpos += float32(dt) * g.Ball.Xvel
 			g.Ball.Ypos += float32(dt) * g.Ball.Yvel
-			g.Ball.Zpos += float32(dt) * g.Ball.Zvel
-			pct := len(g.InfoMap)
-			pb_players := make([]*pb.Player, 0, pct)
-
-			for _, player := range g.InfoMap{
-				pb_players = append(pb_players, player)
-			}
-
-				
-				
-			data, err := proto.Marshal(&pb.GameState{Ball:g.Ball, Players: pb_players})
+			g.Ball.Zpos += float32(dt) * g.Ball.Zvel			
+			data, err := proto.Marshal(&pb.GameState{Ball: g.Ball, Players: g.InfoMap, Timestamp: uint64(time.Now().UnixNano() / 1000000)})
 			if err != nil {
 				log.Fatal("marshaling error: ", err)
 			}
-				
-			g.Room.Broadcast <-  data
-				
+
+			g.Room.Broadcast <- data
+
 			for i := 0; i < int(atomic.LoadUint32(&g.Room.PlayerCount))+2; i++ {
 				select {
 				case action := <-g.Room.Actions:
@@ -145,7 +134,7 @@ func (g *GameLoop) registerMove(action *communication.Action) {
 	if move == "join" {
 		pct := int(atomic.LoadUint32(&g.Room.PlayerCount))
 		g.InfoMap[action.ID] = NewPlayerInfo(pct)
-		
+
 		return
 	}
 	if move == "leave" {

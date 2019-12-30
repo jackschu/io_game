@@ -2,8 +2,8 @@ syntax = "proto3";
 
 message GameState {
   Ball ball = 1;
-  repeated Player players =2;
-
+  map<string, Player> players =2;
+  uint64 timestamp = 3;
 }
 
 message Player {
