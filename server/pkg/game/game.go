@@ -5,6 +5,7 @@ import (
 	"github.com/jackschu/io_game/pkg/communication"
 	"github.com/jackschu/io_game/pkg/websocket"
 	"log"
+	"math"
 	"time"
 )
 
@@ -43,6 +44,19 @@ func NewGameLoop(room *websocket.Room) *GameLoop {
 	}
 }
 
+func playerBallCollide(player *PlayerInfo, ball *BallInfo) bool {
+	// TODO replace player size with consts
+	player_size := 200.0
+	circle_radius := 50.0
+
+	rectX := player.Xpos - player_size/2
+	rectY := player.Ypos - player_size/2
+
+	deltaX := ball.Xpos - math.Max(rectX, math.Min(ball.Xpos, rectX+player_size))
+	deltaY := ball.Ypos - math.Max(rectY, math.Min(ball.Ypos, rectY+player_size))
+	return (deltaX*deltaX + deltaY*deltaY) < (circle_radius * circle_radius)
+}
+
 func (g *GameLoop) Start() {
 	go g.poll()
 
@@ -59,8 +73,19 @@ func (g *GameLoop) Start() {
 			ball_radius := float64(50)
 			if g.Ball.Zpos > 800 && g.Ball.Zvel > 0 {
 				g.Ball.Zvel *= -1
-			} else if g.Ball.Zpos < 0 && g.Ball.Zvel < 0 {
-				g.Ball.Zvel *= -1
+			} else if g.Ball.Zpos < 0 && -2*ball_radius < g.Ball.Zpos && g.Ball.Zvel < 0 {
+				bounce := false
+				for _, player := range g.InfoMap {
+					if(playerBallCollide(player, g.Ball)){
+						bounce = true
+						break;
+					}
+				}
+				if bounce {
+					g.Ball.Zvel *= -1
+				} else {
+					g.Ball.Zpos = 800
+				}
 			}
 
 			if g.Ball.Xpos > 1500-ball_radius && g.Ball.Xvel > 0 {
