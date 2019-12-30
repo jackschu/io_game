@@ -175,40 +175,36 @@ document.body.appendChild(app.view);
 window.addEventListener('resize', resize);
 
 socket.onmessage = event => {
-    var fileReader = new FileReader();
-    fileReader.onload = function() {
-        let pb_state = updates.GameState.deserializeBinary(this.result);
+    let pb_state = updates.GameState.deserializeBinary(event.data);
 
-        let pb_object = pb_state.toObject();
-        let timestamp = pb_object.timestamp;
-        let rawPlayerData = pb_object.playersMap;
+    let pb_object = pb_state.toObject();
+    let timestamp = pb_object.timestamp;
+    let rawPlayerData = pb_object.playersMap;
 
-        let incoming_players = new Set();
-        for (const [key_i, data] of rawPlayerData) {
-            let key = String(key_i);
-            incoming_players.add(key);
-            if (players[key] === undefined) {
-                players[key] = new Player(key);
-            }
-            addState(data, timestamp, playerStates[key]);
+    let incoming_players = new Set();
+
+    for (const [key_i, data] of rawPlayerData) {
+        let key = String(key_i);
+        incoming_players.add(key);
+        if (players[key] === undefined) {
+            players[key] = new Player(key);
         }
+        addState(data, timestamp, playerStates[key]);
+    }
 
-        for (const key in players) {
-            if (!incoming_players.has(key)) {
-                players[key].destroy();
-                delete players[key];
-            }
+    for (const key in players) {
+        if (!incoming_players.has(key)) {
+            players[key].destroy();
+            delete players[key];
         }
+    }
 
-        let ballData = pb_object.ball;
-        if (ball === undefined) {
-            console.log('new ball');
-            ball = new Ball(ballData.zpos);
-        }
-        addState(ballData, timestamp, ballStates);
-    };
-
-    fileReader.readAsArrayBuffer(event.data);
+    let ballData = pb_object.ball;
+    if (ball === undefined) {
+        console.log('new ball');
+        ball = new Ball(ballData.zpos);
+    }
+    addState(ballData, timestamp, ballStates);
 };
 
 function pointProject(x, y, z) {
