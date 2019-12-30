@@ -9,6 +9,7 @@ const VIRTUAL_PLAYER_SIZE = 200; // what we think of it as
 let PLAYER_SIZE; // what we tell pixi
 const RENDER_DELAY = 50;
 const SEND_FPS = 60;
+var updates = require('./updates_pb');
 
 let lastSendTimestamp;
 let serverClientGap;
@@ -78,18 +79,18 @@ class Ball {
         if (curState === null) {
             return;
         }
-        const [x0, _] = pointProject(BALL_RADIUS + WIDTH / 2, 0, curState.Zpos);
+        const [x0, _] = pointProject(BALL_RADIUS + WIDTH / 2, 0, curState.zpos);
         const radius = x0 - WIDTH / 2;
         this.pixi_obj.clear();
         this.pixi_obj.beginFill(0xff0000);
         const [x, y] = pointProject(
-            curState.Xpos,
-            curState.Ypos,
-            curState.Zpos
+            curState.xpos,
+            curState.ypos,
+            curState.zpos
         );
         this.pixi_obj.drawCircle(x, y, radius);
         this.pixi_obj.endFill();
-        depth_indicator.depth = curState.Zpos;
+        depth_indicator.depth = curState.zpos;
     }
 }
 
@@ -141,8 +142,8 @@ class Player {
         if (curState === null) {
             return;
         }
-        this.pixi_obj.x = curState.Xpos - PLAYER_SIZE / 2;
-        this.pixi_obj.y = curState.Ypos - PLAYER_SIZE / 2;
+        this.pixi_obj.x = curState.xpos - PLAYER_SIZE / 2;
+        this.pixi_obj.y = curState.ypos - PLAYER_SIZE / 2;
     }
     destroy() {
         this.pixi_obj.destroy();
@@ -173,31 +174,38 @@ document.body.appendChild(app.view);
 window.addEventListener('resize', resize);
 
 socket.onmessage = event => {
-    let rawData = JSON.parse(event.data);
-    let ball_and_players = JSON.parse(rawData.Body);
-    let rawPlayerData = JSON.parse(ball_and_players.players);
-    let timestamp = JSON.parse(rawData.Timestamp);
+    var fileReader = new FileReader();
+    fileReader.onload = function() {
+        let pb_state = updates.GameState.deserializeBinary(this.result);
+        let pb_object = pb_state.toObject();
+        let timestamp = pb_object.timestamp;
+        let rawPlayerData = pb_object.playersMap;
+        let incoming_players = new Set();
+        for (const [key, data] of rawPlayerData) {
+            incoming_players.add(key);
+            if (players[key] === undefined) {
+                players[key] = new Player(key);
+            }
 
-    for (const key in rawPlayerData) {
-        const data = rawPlayerData[key];
-        if (players[key] === undefined) {
-            players[key] = new Player(key);
+            addState(data, timestamp, playerStates[key]);
         }
-        addState(data, timestamp, playerStates[key]);
-    }
-    for (const key in players) {
-        if (rawPlayerData[key] === undefined) {
-            players[key].destroy();
-            delete players[key];
+        console.log(players);
+        for (const key in players) {
+            if (!incoming_players.has(key)) {
+                players[key].destroy();
+                delete players[key];
+            }
         }
-    }
 
-    let ballData = JSON.parse(ball_and_players.ball);
-    if (ball === undefined) {
-        console.log('new ball');
-        ball = new Ball(ballData.Zpos);
-    }
-    addState(ballData, timestamp, ballStates);
+        let ballData = pb_object.ball;
+        if (ball === undefined) {
+            console.log('new ball');
+            ball = new Ball(ballData.zpos);
+        }
+        addState(ballData, timestamp, ballStates);
+    };
+
+    fileReader.readAsArrayBuffer(event.data);
 };
 
 function pointProject(x, y, z) {
