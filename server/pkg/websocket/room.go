@@ -3,15 +3,18 @@ package websocket
 import (
 	"fmt"
 	"github.com/jackschu/io_game/pkg/communication"
+	"log"
+	"sync/atomic"
 	"time"
 )
 
 type Room struct {
-	Joining   chan *Client
-	Leaving   chan *Client
-	Clients   map[*Client]bool
-	Broadcast chan Message
-	Actions   chan *communication.Action
+	Joining     chan *Client
+	Leaving     chan *Client
+	Clients     map[*Client]bool
+	Broadcast   chan Message
+	Actions     chan *communication.Action
+	PlayerCount uint32
 }
 
 type Message struct {
@@ -32,7 +35,7 @@ func NewRoom() *Room {
 		Leaving:   make(chan *Client),
 		Clients:   make(map[*Client]bool),
 		Broadcast: make(chan Message),
-		Actions:   make(chan *communication.Action),
+		Actions:   make(chan *communication.Action, 8),
 	}
 }
 
@@ -41,12 +44,18 @@ func (room *Room) Start() {
 		select {
 		case client := <-room.Joining:
 			room.Clients[client] = true
-			fmt.Println("Joining, Users in room: ", len(room.Clients))
-			room.Actions <- &communication.Action{ID: client.ID, Move: "join"}
+			atomic.AddUint32(&room.PlayerCount, 1)
+			fmt.Println("Joining, Users in room: ", room.PlayerCount)
+			select {
+			case room.Actions <- &communication.Action{ID: client.ID, Move: "join"}:
+			default:
+				log.Println("full join")
+			}
 			break
 		case client := <-room.Leaving:
+			atomic.AddUint32(&room.PlayerCount, ^uint32(0))
 			delete(room.Clients, client)
-			fmt.Println("Leaving, Users in room: ", len(room.Clients))
+			fmt.Println("Leaving, Users in room: ", room.PlayerCount)
 			room.Actions <- &communication.Action{ID: client.ID, Move: "leave"}
 			break
 		case message := <-room.Broadcast:

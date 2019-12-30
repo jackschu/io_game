@@ -6,6 +6,7 @@ import (
 	"github.com/jackschu/io_game/pkg/websocket"
 	"log"
 	"math"
+	"sync/atomic"
 	"time"
 )
 
@@ -58,8 +59,6 @@ func playerBallCollide(player *PlayerInfo, ball *BallInfo) bool {
 }
 
 func (g *GameLoop) Start() {
-	go g.poll()
-
 	prev := time.Now()
 	ticker := time.NewTicker(16 * time.Millisecond)
 	for {
@@ -76,9 +75,9 @@ func (g *GameLoop) Start() {
 			} else if g.Ball.Zpos < 0 && -2*ball_radius < g.Ball.Zpos && g.Ball.Zvel < 0 {
 				bounce := false
 				for _, player := range g.InfoMap {
-					if(playerBallCollide(player, g.Ball)){
+					if playerBallCollide(player, g.Ball) {
 						bounce = true
-						break;
+						break
 					}
 				}
 				if bounce {
@@ -122,17 +121,18 @@ func (g *GameLoop) Start() {
 			} else {
 				g.Room.Broadcast <- *websocket.NewMessage(string(json_out))
 			}
+			for i := 0; i < int(atomic.LoadUint32(&g.Room.PlayerCount))+2; i++ {
+				select {
+				case action := <-g.Room.Actions:
+					g.registerMove(action)
+				default:
+					break
+				}
+			}
 		}
 
 	}
 
-}
-
-func (g *GameLoop) poll() {
-	for {
-		action := <-g.Room.Actions
-		go g.registerMove(action)
-	}
 }
 
 func (g *GameLoop) registerMove(action *communication.Action) {
