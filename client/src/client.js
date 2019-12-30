@@ -189,7 +189,7 @@ socket.onmessage = event => {
 
             addState(data, timestamp, playerStates[key]);
         }
-        console.log(players);
+
         for (const key in players) {
             if (!incoming_players.has(key)) {
                 players[key].destroy();

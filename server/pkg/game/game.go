@@ -107,7 +107,7 @@ func (g *GameLoop) Start() {
 
 			g.Ball.Xpos += float32(dt) * g.Ball.Xvel
 			g.Ball.Ypos += float32(dt) * g.Ball.Yvel
-			g.Ball.Zpos += float32(dt) * g.Ball.Zvel			
+			g.Ball.Zpos += float32(dt) * g.Ball.Zvel
 			data, err := proto.Marshal(&pb.GameState{Ball: g.Ball, Players: g.InfoMap, Timestamp: uint64(time.Now().UnixNano() / 1000000)})
 			if err != nil {
 				log.Fatal("marshaling error: ", err)
