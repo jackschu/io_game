@@ -63,7 +63,7 @@ function generateCurrentState(stateArr) {
             (nextState.timestamp - curState.timestamp);
         return interpolate(curState, nextState, ratio);
     } else {
-        return curState;
+        return curState.data;
     }
 }
 
