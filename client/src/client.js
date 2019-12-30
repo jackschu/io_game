@@ -118,7 +118,7 @@ function interpolate(curState, nextState, ratio) {
 class Player {
     constructor(username) {
         this.pixi_obj = new PIXI.Graphics()
-            .beginFill(0xff0000)
+            .beginFill(0xff0000, 0.3)
             .drawRect(0, 0, PLAYER_SIZE, PLAYER_SIZE);
         this.username = username;
         const name = new PIXI.Text(username.substring(0, 5), {
