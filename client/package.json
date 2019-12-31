@@ -5,9 +5,10 @@
     "private": true,
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "build": "protoc updates.proto --proto_path=../proto --go_out=../server/pkg/proto --js_out=import_style=commonjs,binary:../client/src && webpack --mode production",
-        "dev": "protoc updates.proto --proto_path=../proto --go_out=../server/pkg/proto --js_out=import_style=commonjs,binary:../client/src && webpack --mode development",
-        "start": "protoc updates.proto --proto_path=../proto --go_out=../server/pkg/proto --js_out=import_style=commonjs,binary:../client/src && yarn dev && webpack-dev-server --open"
+        "build": "webpack --mode production",
+        "dev": "webpack --mode development",
+        "start": "yarn dev && webpack-dev-server --open",
+        "proto": "protoc updates.proto --proto_path=../proto --go_out=../server/pkg/proto --js_out=import_style=commonjs,binary:../client/src"
     },
     "husky": {
         "hooks": {
