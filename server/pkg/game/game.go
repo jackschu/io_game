@@ -18,6 +18,7 @@ type BallInfo struct {
 	Zvel float64
 	Xang float64
 	Yang float64
+	Zang float64
 }
 
 // TODO replace cwith constant vars
@@ -31,6 +32,7 @@ func NewBallInfo() *BallInfo {
 		Zvel: 0.7,
 		Xang: 0,
 		Yang: 0,
+		Zang: 0,
 	}
 }
 
@@ -65,10 +67,11 @@ func applySpin(ball *BallInfo) {
 	// constant that dampens spin effect
 	multiple := 0.0002
 
-	ball.Yvel += (ball.Yang * ball.Zvel) * multiple
-	ball.Xvel += -(ball.Xang * ball.Zvel) * multiple
+	ball.Xvel += (ball.Yang*ball.Zvel - ball.Zang*ball.Yvel) * multiple
+	ball.Yvel += (ball.Zang*ball.Xvel - ball.Xang*ball.Zvel) * multiple
 
 	// additional constant for dampening spin affect z-velocity
+	// prevents ball from switching directions
 	zMultiple := 0.05
 	ball.Zvel += (ball.Yang*ball.Xvel - ball.Xang*ball.Yvel) * multiple * zMultiple
 }
@@ -77,9 +80,9 @@ func applySpin(ball *BallInfo) {
 func resetVel(ball *BallInfo) {
 	ball.Xang = 0
 	ball.Yang = 0
-	ball.Xvel = 0.7
-	ball.Yvel = 0.7
-	ball.Zvel = 0.7
+	ball.Xvel = 0.3
+	ball.Yvel = 0.3
+	ball.Zvel = 0.3
 }
 
 func (g *GameLoop) Start() {
@@ -102,8 +105,8 @@ func (g *GameLoop) Start() {
 				bounce := false
 				for _, player := range g.InfoMap {
 					if playerBallCollide(player, g.Ball) {
-						g.Ball.Xang = player.Xpos - player.Xlast
-						g.Ball.Yang = player.Ypos - player.Ylast
+						g.Ball.Xang = player.Ylast - player.Ypos
+						g.Ball.Yang = player.Xlast - player.Xpos
 						bounce = true
 						break
 					}
