@@ -8,7 +8,7 @@ import (
 )
 
 type Client struct {
-	ID   string
+	ID   uint32
 	Conn *websocket.Conn
 	Room *Room
 }

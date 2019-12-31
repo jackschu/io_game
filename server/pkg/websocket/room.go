@@ -2,44 +2,42 @@ package websocket
 
 import (
 	"fmt"
+	"github.com/gorilla/websocket"
 	"github.com/jackschu/io_game/pkg/communication"
+	pb "github.com/jackschu/io_game/pkg/proto"
 	"log"
 	"sync/atomic"
-	"time"
 )
 
 type Room struct {
 	Joining     chan *Client
 	Leaving     chan *Client
 	Clients     map[*Client]bool
-	Broadcast   chan Message
+	Broadcast   chan []byte
 	Actions     chan *communication.Action
 	PlayerCount uint32
+	PlayerIDs   chan uint32
 }
 
 type Message struct {
-	Body      string
-	Timestamp int64
-}
-
-func NewMessage(body string) *Message {
-	return &Message{
-		Body:      body,
-		Timestamp: time.Now().UnixNano() / 1000000,
-	}
+	Ball    pb.Ball
+	Players map[string]pb.Player
 }
 
 func NewRoom() *Room {
 	return &Room{
-		Joining:   make(chan *Client),
-		Leaving:   make(chan *Client),
-		Clients:   make(map[*Client]bool),
-		Broadcast: make(chan Message),
-		Actions:   make(chan *communication.Action, 8),
+		Joining:     make(chan *Client),
+		Leaving:     make(chan *Client),
+		Clients:     make(map[*Client]bool),
+		Broadcast:   make(chan []byte),
+		Actions:     make(chan *communication.Action, 8),
+		PlayerCount: 0,
+		PlayerIDs:   make(chan uint32, 3),
 	}
 }
 
 func (room *Room) Start() {
+	go room.idCounter()
 	for {
 		select {
 		case client := <-room.Joining:
@@ -60,7 +58,7 @@ func (room *Room) Start() {
 			break
 		case message := <-room.Broadcast:
 			for client, _ := range room.Clients {
-				if err := client.Conn.WriteJSON(message); err != nil {
+				if err := client.Conn.WriteMessage(websocket.BinaryMessage, message); err != nil {
 					fmt.Println(err)
 					return
 				}
@@ -68,4 +66,12 @@ func (room *Room) Start() {
 		}
 	}
 
+}
+
+func (room *Room) idCounter() {
+	counter := uint32(0)
+	for {
+		room.PlayerIDs <- counter
+		counter += 1
+	}
 }
