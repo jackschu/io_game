@@ -26,9 +26,9 @@ func NewBallInfo() *BallInfo {
 		Xpos: 750,
 		Ypos: 500,
 		Zpos: 0,
-		Xvel: 0.3,
-		Yvel: 0.3,
-		Zvel: 0.3,
+		Xvel: 0.7,
+		Yvel: 0.7,
+		Zvel: 0.7,
 		Xang: 0,
 		Yang: 0,
 	}
@@ -37,7 +37,6 @@ func NewBallInfo() *BallInfo {
 type GameLoop struct {
 	Room    *websocket.Room
 	InfoMap map[string]*PlayerInfo
-	HistMap map[string]*PlayerInfo
 	Ball    *BallInfo
 }
 
@@ -45,7 +44,6 @@ func NewGameLoop(room *websocket.Room) *GameLoop {
 	return &GameLoop{
 		Room:    room,
 		InfoMap: make(map[string]*PlayerInfo),
-		HistMap: make(map[string]*PlayerInfo),
 		Ball:    NewBallInfo(),
 	}
 }
@@ -64,18 +62,24 @@ func playerBallCollide(player *PlayerInfo, ball *BallInfo) bool {
 }
 
 func applySpin(ball *BallInfo) {
-	multiple := 0.0004
+	// constant that dampens spin effect
+	multiple := 0.0002
+
 	ball.Yvel += (ball.Yang * ball.Zvel) * multiple
 	ball.Xvel += -(ball.Xang * ball.Zvel) * multiple
-	ball.Zvel += (ball.Yang*ball.Xvel - ball.Xang*ball.Yvel) * multiple * 0.05
+
+	// additional constant for dampening spin affect z-velocity
+	zMultiple := 0.05
+	ball.Zvel += (ball.Yang*ball.Xvel - ball.Xang*ball.Yvel) * multiple * zMultiple
 }
 
+// reset velocities, including angular velocity
 func resetVel(ball *BallInfo) {
 	ball.Xang = 0
 	ball.Yang = 0
-	ball.Xvel = 0.3
-	ball.Yvel = 0.3
-	ball.Zvel = 0.3
+	ball.Xvel = 0.7
+	ball.Yvel = 0.7
+	ball.Zvel = 0.7
 }
 
 func (g *GameLoop) Start() {
@@ -96,10 +100,10 @@ func (g *GameLoop) Start() {
 				g.Ball.Zvel *= -1
 			} else if g.Ball.Zpos < 0 && -2*ball_radius < g.Ball.Zpos && g.Ball.Zvel < 0 {
 				bounce := false
-				for key, player := range g.InfoMap {
+				for _, player := range g.InfoMap {
 					if playerBallCollide(player, g.Ball) {
-						g.Ball.Xang = player.Xpos - g.HistMap[key].Xpos
-						g.Ball.Yang = player.Ypos - g.HistMap[key].Ypos
+						g.Ball.Xang = player.Xpos - player.Xlast
+						g.Ball.Yang = player.Ypos - player.Ylast
 						bounce = true
 						break
 					}
@@ -168,15 +172,16 @@ func (g *GameLoop) registerMove(action *communication.Action) {
 	}
 	if move == "leave" {
 		delete(g.InfoMap, action.ID)
-		delete(g.HistMap, action.ID)
 		return
 	}
 
 	if json.Valid([]byte(move)) {
-		if curPlayer, ok := g.InfoMap[action.ID]; ok {
-			g.HistMap[action.ID] = &PlayerInfo{curPlayer.Xpos, curPlayer.Ypos}
-		}
-		json.Unmarshal([]byte(move), g.InfoMap[action.ID])
+		curPlayer := g.InfoMap[action.ID]
+		Xlast := curPlayer.Xpos
+		Ylast := curPlayer.Ypos
+		json.Unmarshal([]byte(move), curPlayer)
+		curPlayer.Xlast = Xlast
+		curPlayer.Ylast = Ylast
 
 	} else {
 		log.Println("got invalid JSON " + move)
