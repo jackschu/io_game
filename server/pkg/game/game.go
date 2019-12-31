@@ -80,9 +80,9 @@ func applySpin(ball *BallInfo) {
 func resetVel(ball *BallInfo) {
 	ball.Xang = 0
 	ball.Yang = 0
-	ball.Xvel = 0.3
-	ball.Yvel = 0.3
-	ball.Zvel = 0.3
+	ball.Xvel = 0.7
+	ball.Yvel = 0.7
+	ball.Zvel = 0.7
 }
 
 func (g *GameLoop) Start() {
