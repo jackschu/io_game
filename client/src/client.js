@@ -1,35 +1,16 @@
-import { socket } from './socket_io.js';
 import * as PIXI from 'pixi.js-legacy';
-const WIDTH = 1500;
-const HEIGHT = 1000;
-const NEON = 0x33ff3f;
-const PERSPECTIVE_D = 250;
-const BALL_RADIUS = 50;
-const VIRTUAL_PLAYER_SIZE = 200; // what we think of it as
-let PLAYER_SIZE; // what we tell pixi
-const RENDER_DELAY = 50;
-const SEND_FPS = 60;
+import { socket } from './socket_io';
+import { clip, pointProject } from './utils.js';
+import { DepthIndicator, boxesTunnel, debugCorners } from './box';
+import Constants from '../../Constants';
+import updates from './updates_pb';
 
-var updates = require('./updates_pb');
-
+let players = {};
+let ball;
+let playerSize;
+let depthIndicator;
 let lastSendTimestamp;
 let serverClientGap;
-
-let BACK_BOX_DEPTH;
-class DepthIndicator {
-    constructor(pixi_obj) {
-        this.pixi_obj = pixi_obj;
-        this.depth = 0;
-    }
-
-    update() {
-        const [x0, y0, x1, y1] = emptyBoxCoordinates(this.depth);
-        this.pixi_obj.x = x0;
-        this.pixi_obj.y = y0;
-        this.pixi_obj.width = x1 - x0;
-        this.pixi_obj.height = y1 - y0;
-    }
-}
 
 const ballStates = [];
 const playerStates = {};
@@ -61,7 +42,7 @@ function generateCurrentState(stateArr) {
     if (i < stateArr.length - 1) {
         let nextState = stateArr[i + 1];
         let ratio =
-            (curTime - RENDER_DELAY - curState.timestamp) /
+            (curTime - Constants.RENDER_DELAY - curState.timestamp) /
             (nextState.timestamp - curState.timestamp);
         return interpolate(curState, nextState, ratio);
     } else {
@@ -71,8 +52,9 @@ function generateCurrentState(stateArr) {
 
 class Ball {
     constructor() {
-        this.pixi_obj = new PIXI.Graphics();
-        app.stage.addChild(this.pixi_obj);
+        this.pixiObj = new PIXI.Graphics();
+        this.zPos = 0;
+        app.stage.addChild(this.pixiObj);
     }
 
     update() {
@@ -80,18 +62,18 @@ class Ball {
         if (curState === null) {
             return;
         }
-        const [x0, _] = pointProject(BALL_RADIUS + WIDTH / 2, 0, curState.zpos);
-        const radius = x0 - WIDTH / 2;
-        this.pixi_obj.clear();
-        this.pixi_obj.beginFill(0xff0000);
+        const [x0, _] = pointProject(Constants.BALL_RADIUS + Constants.WIDTH / 2, 0, curState.zpos);
+        const radius = x0 - Constants.WIDTH / 2;
+        this.pixiObj.clear();
+        this.pixiObj.beginFill(0xff0000);
         const [x, y] = pointProject(
             curState.xpos,
             curState.ypos,
             curState.zpos
         );
-        this.pixi_obj.drawCircle(x, y, radius);
-        this.pixi_obj.endFill();
-        depth_indicator.depth = curState.zpos;
+        this.pixiObj.drawCircle(x, y, radius);
+        this.pixiObj.endFill();
+        depthIndicator.depth = curState.zpos;
     }
 }
 
@@ -102,7 +84,7 @@ function clientTime() {
 function getBaseState(states) {
     let curTime = clientTime();
     for (let i = states.length - 1; i >= 0; i--) {
-        if (curTime - states[i].timestamp >= RENDER_DELAY) {
+        if (curTime - states[i].timestamp >= Constants.RENDER_DELAY) {
             return i;
         }
     }
@@ -121,9 +103,9 @@ function interpolate(curState, nextState, ratio) {
 
 class Player {
     constructor(username) {
-        this.pixi_obj = new PIXI.Graphics()
+        this.pixiObj = new PIXI.Graphics()
             .beginFill(0xff0000, 0.3)
-            .drawRect(0, 0, PLAYER_SIZE, PLAYER_SIZE);
+            .drawRect(0, 0, playerSize, playerSize);
         this.username = String(username);
         const name = new PIXI.Text(String(username), {
             fontFamily: 'Arial',
@@ -132,10 +114,10 @@ class Player {
             align: 'right',
         });
         name.anchor.set(0.5, 0.5);
-        name.position.set(PLAYER_SIZE / 2, PLAYER_SIZE / 2);
-        this.pixi_obj.addChild(name);
+        name.position.set(playerSize / 2, playerSize / 2);
+        this.pixiObj.addChild(name);
         playerStates[username] = [];
-        app.stage.addChild(this.pixi_obj);
+        app.stage.addChild(this.pixiObj);
     }
 
     update() {
@@ -143,22 +125,14 @@ class Player {
         if (curState === null) {
             return;
         }
-        this.pixi_obj.x = curState.xpos - PLAYER_SIZE / 2;
-        this.pixi_obj.y = curState.ypos - PLAYER_SIZE / 2;
+        this.pixiObj.x = curState.xpos - playerSize / 2;
+        this.pixiObj.y = curState.ypos - playerSize / 2;
     }
     destroy() {
-        this.pixi_obj.destroy();
+        this.pixiObj.destroy();
         delete playerStates[this.username];
     }
 }
-
-function clip(number, min, max) {
-    return Math.max(min, Math.min(number, max));
-}
-
-const players = {};
-let ball;
-let depth_indicator;
 
 let app = new PIXI.Application({
     antialias: true, // default: false
@@ -168,24 +142,21 @@ let app = new PIXI.Application({
     resizeTo: window,
 });
 
-PIXI.settings.RESOLUTION = window.devicePixelRatio;
-
 document.body.appendChild(app.view);
-
 window.addEventListener('resize', resize);
 
 socket.onmessage = event => {
-    let pb_state = updates.GameState.deserializeBinary(event.data);
+    let pbState = updates.GameState.deserializeBinary(event.data);
 
-    let pb_object = pb_state.toObject();
-    let timestamp = pb_object.timestamp;
-    let rawPlayerData = pb_object.playersMap;
+    let pbObject = pbState.toObject();
+    let timestamp = pbObject.timestamp;
+    let rawPlayerData = pbObject.playersMap;
 
-    let incoming_players = new Set();
+    let incomingPlayers = new Set();
 
-    for (const [key_i, data] of rawPlayerData) {
-        let key = String(key_i);
-        incoming_players.add(key);
+    for (const [keyI, data] of rawPlayerData) {
+        let key = String(keyI);
+        incomingPlayers.add(key);
         if (players[key] === undefined) {
             players[key] = new Player(key);
         }
@@ -193,110 +164,42 @@ socket.onmessage = event => {
     }
 
     for (const key in players) {
-        if (!incoming_players.has(key)) {
+        if (!incomingPlayers.has(key)) {
             players[key].destroy();
             delete players[key];
         }
     }
 
-    let ballData = pb_object.ball;
+    let ballData = pbObject.ball;
     if (ball === undefined) {
-        console.log('new ball');
         ball = new Ball(ballData.zpos);
     }
     addState(ballData, timestamp, ballStates);
 };
 
-function pointProject(x, y, z) {
-    let x_0 = WIDTH / 2;
-    let y_0 = HEIGHT / 2;
-    let xp = x_0 + ((x - x_0) * PERSPECTIVE_D) / (z + PERSPECTIVE_D);
-    let yp = y_0 + ((y - y_0) * PERSPECTIVE_D) / (z + PERSPECTIVE_D);
-
-    return [xp, yp];
-}
-
-function emptyBoxCoordinates(depth) {
-    let out = pointProject(0, 0, depth);
-    out.push.apply(out, pointProject(WIDTH, HEIGHT, depth));
-    return out;
-}
-
-function emptyBox(depth, color = NEON, width = 2) {
-    let box = new PIXI.Graphics();
-    // width of lines scale with depth
-    box.lineStyle((width * 500) / (depth + 500), color, 1);
-    box.beginFill(0, 0);
-    const [x0, y0, x1, y1] = emptyBoxCoordinates(depth);
-    box.drawRect(x0, y0, x1 - x0, y1 - y0);
-    box.endFill();
-    return box;
-}
-
-function getLine(x0, y0, z0, x1, y1, z1) {
-    let line = new PIXI.Graphics();
-    line.lineStyle(2, NEON);
-    const [x0_out, y0_out] = pointProject(x0, y0, z0);
-    const [x1_out, y1_out] = pointProject(x1, y1, z1);
-    line.moveTo(x0_out, y0_out);
-    line.lineTo(x1_out, y1_out);
-    return line;
-}
 function moveHandler(e) {
     let now = new Date().getTime();
-    if (lastSendTimestamp && now - lastSendTimestamp < 1000 / SEND_FPS) {
+    if (lastSendTimestamp && now - lastSendTimestamp < 1000 / Constants.SEND_FPS) {
         return;
     }
     lastSendTimestamp = now;
     const pos = e.data.getLocalPosition(app.stage);
-    const out_obj = {
-        XPos: clip(pos.x, 0, WIDTH),
-        YPos: clip(pos.y, 0, HEIGHT),
+    const outObj = {
+        XPos: clip(pos.x, 0, Constants.WIDTH),
+        YPos: clip(pos.y, 0, Constants.HEIGHT),
     };
-    const out = JSON.stringify(out_obj);
+    const out = JSON.stringify(outObj);
     socket.send(out);
 }
+
 function setup() {
     app.stage.interactive = true;
-    //app.renderer.plugins.interaction.interactionFrequency = 500;
     app.stage.on('pointermove', moveHandler);
-    // DEBUG corners for debugging
-    let corner = new PIXI.Graphics().beginFill(0xff0000).drawRect(0, 0, 10, 10);
-    app.stage.addChild(corner);
-    let corner2 = new PIXI.Graphics()
-        .beginFill(0xff0000)
-        .drawRect(WIDTH - 10, HEIGHT - 10, 10, 10);
-    app.stage.addChild(corner2);
 
-    // add green frames
-    const num_boxes = 9;
-    for (let i = 0; i < num_boxes; i++) {
-        const box = emptyBox(i * 100);
-        app.stage.addChild(box);
-    }
-    BACK_BOX_DEPTH = (num_boxes - 1) * 100;
+    app.stage.addChild(debugCorners());
+    app.stage.addChild(boxesTunnel());
 
-    // add lines connecting frames
-    const line_indices = [
-        [0, 0],
-        [0, 1],
-        [1, 0],
-        [1, 1],
-    ];
-    for (const [i, j] of line_indices) {
-        let line = getLine(
-            i * WIDTH,
-            j * HEIGHT,
-            0,
-            i * WIDTH,
-            j * HEIGHT,
-            BACK_BOX_DEPTH
-        );
-        app.stage.addChild(line);
-    }
-    const indicator_box = emptyBox(0, 0x33fcff, 4);
-    app.stage.addChild(indicator_box);
-    depth_indicator = new DepthIndicator(indicator_box);
+    depthIndicator = new DepthIndicator();
 
     app.ticker.add(delta => gameLoop(delta));
 }
@@ -306,7 +209,7 @@ function gameLoop(delta) {
     if (delta > 1.1) {
         console.log(delta);
     }
-
+    
     for (const key of Object.keys(players)) {
         players[key].update();
     }
@@ -315,22 +218,23 @@ function gameLoop(delta) {
         ball.update();
     }
 
-    depth_indicator.update();
+    depthIndicator.update();
 }
 
 // Resize function window
 function resize() {
     // Resize the renderer
-
-    var ratio = Math.min(
-        window.innerWidth / WIDTH,
-        window.innerHeight / HEIGHT
+    let ratio = Math.min(
+        window.innerWidth / Constants.WIDTH,
+        window.innerHeight / Constants.HEIGHT
     );
+    
     app.renderer.resize(window.innerWidth, window.innerHeight);
     app.stage.scale.x = app.stage.scale.y = ratio;
-    PLAYER_SIZE = Math.min(
-        (app.screen.height * VIRTUAL_PLAYER_SIZE) / HEIGHT / ratio,
-        (app.screen.width * VIRTUAL_PLAYER_SIZE) / WIDTH / ratio
+    
+    playerSize = Math.min(
+        (app.screen.height * Constants.VIRTUAL_PLAYER_SIZE) / Constants.HEIGHT / ratio,
+        (app.screen.width * Constants.VIRTUAL_PLAYER_SIZE) / Constants.WIDTH / ratio
     );
 
     // TODO Move container to the center
