@@ -1,6 +1,6 @@
 import Constants from '../../Constants';
 
-let states = {};
+let states = new WeakMap();
 let serverClientGap;
 
 function clientTime() {
@@ -9,7 +9,7 @@ function clientTime() {
 
 function getBaseState(obj) {
     let curTime = clientTime();
-    let stateArr = states[obj.hash()];
+    let stateArr = states.get(obj);
     for (let i = stateArr.length - 1; i >= 0; i--) {
         if (curTime - stateArr[i].timestamp >= Constants.RENDER_DELAY) {
             return i;
@@ -29,8 +29,8 @@ function interpolate(curState, nextState, ratio) {
 }
 
 export function addState(rawState, timestamp, obj) {
-    if (states[obj.hash()] === undefined) {
-        states[obj.hash()] = [];
+    if (!states.has(obj)) {
+        states.set(obj, []);
     }
 
     serverClientGap = timestamp - new Date().getTime();
@@ -40,20 +40,20 @@ export function addState(rawState, timestamp, obj) {
         data: rawState,
     };
 
-    states[obj.hash()].push(state);
+    states.get(obj).push(state);
     const base = getBaseState(obj);
     if (base > 0) {
-        states[obj.hash()].splice(0, base);
+        states.get(obj).splice(0, base);
     }
 }
 
-export function generateCurrentState(obj) {
-    if (states[obj.hash()] === undefined) {
-        states[obj.hash()] = [];
+export function generateCurrentState(obj) {    
+    if (!states.has(obj)) {
+        states.set(obj, []);
     }
     
     let curTime = clientTime();
-    let stateArr = states[obj.hash()];
+    let stateArr = states.get(obj);
     let i = getBaseState(obj);
 
     if (i == -1) {
@@ -73,5 +73,5 @@ export function generateCurrentState(obj) {
 }
 
 export function deleteStates(obj) {
-    delete states[obj.hash()];
+    states.delete(obj);
 }
