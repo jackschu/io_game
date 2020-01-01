@@ -9,10 +9,6 @@ export class Ball {
         this.zPos = zPos;
     }
 
-    hash() {
-        return 'ball';
-    }
-
     update() {
         let curState = generateCurrentState(this);
         if (curState === null) {

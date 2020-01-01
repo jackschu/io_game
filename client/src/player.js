@@ -20,10 +20,6 @@ export class Player {
         this.pixiObj.addChild(name);
     }
 
-    hash() {
-        return this.username;
-    }
-
     update(size) {
         let curState = generateCurrentState(this);
         if (curState === null) {
