@@ -82,11 +82,10 @@ export function boxesTunnel() {
 export class DepthIndicator {
     constructor() {
         this.pixiObj = emptyBox(0, 0x33fcff, 4);
-        this.depth = 0;
     }
 
-    update() {
-        const [x0, y0, x1, y1] = emptyBoxCoordinates(this.depth);
+    update(depth) {
+        const [x0, y0, x1, y1] = emptyBoxCoordinates(depth);
         this.pixiObj.x = x0;
         this.pixiObj.y = y0;
         this.pixiObj.width = x1 - x0;
