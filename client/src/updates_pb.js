@@ -319,7 +319,9 @@ proto.Player.toObject = function(includeInstance, msg) {
   var f, obj = {
     xpos: jspb.Message.getFloatingPointFieldWithDefault(msg, 1, 0.0),
     ypos: jspb.Message.getFloatingPointFieldWithDefault(msg, 2, 0.0),
-    wall: jspb.Message.getFieldWithDefault(msg, 3, 0)
+    xlast: jspb.Message.getFloatingPointFieldWithDefault(msg, 3, 0.0),
+    ylast: jspb.Message.getFloatingPointFieldWithDefault(msg, 4, 0.0),
+    wall: jspb.Message.getFieldWithDefault(msg, 5, 0)
   };
 
   if (includeInstance) {
@@ -365,6 +367,14 @@ proto.Player.deserializeBinaryFromReader = function(msg, reader) {
       msg.setYpos(value);
       break;
     case 3:
+      var value = /** @type {number} */ (reader.readFloat());
+      msg.setXlast(value);
+      break;
+    case 4:
+      var value = /** @type {number} */ (reader.readFloat());
+      msg.setYlast(value);
+      break;
+    case 5:
       var value = /** @type {!proto.Player.Wall} */ (reader.readEnum());
       msg.setWall(value);
       break;
@@ -411,10 +421,24 @@ proto.Player.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
+  f = message.getXlast();
+  if (f !== 0.0) {
+    writer.writeFloat(
+      3,
+      f
+    );
+  }
+  f = message.getYlast();
+  if (f !== 0.0) {
+    writer.writeFloat(
+      4,
+      f
+    );
+  }
   f = message.getWall();
   if (f !== 0.0) {
     writer.writeEnum(
-      3,
+      5,
       f
     );
   }
@@ -460,17 +484,47 @@ proto.Player.prototype.setYpos = function(value) {
 
 
 /**
- * optional Wall wall = 3;
+ * optional float Xlast = 3;
+ * @return {number}
+ */
+proto.Player.prototype.getXlast = function() {
+  return /** @type {number} */ (jspb.Message.getFloatingPointFieldWithDefault(this, 3, 0.0));
+};
+
+
+/** @param {number} value */
+proto.Player.prototype.setXlast = function(value) {
+  jspb.Message.setProto3FloatField(this, 3, value);
+};
+
+
+/**
+ * optional float Ylast = 4;
+ * @return {number}
+ */
+proto.Player.prototype.getYlast = function() {
+  return /** @type {number} */ (jspb.Message.getFloatingPointFieldWithDefault(this, 4, 0.0));
+};
+
+
+/** @param {number} value */
+proto.Player.prototype.setYlast = function(value) {
+  jspb.Message.setProto3FloatField(this, 4, value);
+};
+
+
+/**
+ * optional Wall wall = 5;
  * @return {!proto.Player.Wall}
  */
 proto.Player.prototype.getWall = function() {
-  return /** @type {!proto.Player.Wall} */ (jspb.Message.getFieldWithDefault(this, 3, 0));
+  return /** @type {!proto.Player.Wall} */ (jspb.Message.getFieldWithDefault(this, 5, 0));
 };
 
 
 /** @param {!proto.Player.Wall} value */
 proto.Player.prototype.setWall = function(value) {
-  jspb.Message.setProto3EnumField(this, 3, value);
+  jspb.Message.setProto3EnumField(this, 5, value);
 };
 
 
@@ -511,7 +565,10 @@ proto.Ball.toObject = function(includeInstance, msg) {
     zpos: jspb.Message.getFloatingPointFieldWithDefault(msg, 3, 0.0),
     xvel: jspb.Message.getFloatingPointFieldWithDefault(msg, 4, 0.0),
     yvel: jspb.Message.getFloatingPointFieldWithDefault(msg, 5, 0.0),
-    zvel: jspb.Message.getFloatingPointFieldWithDefault(msg, 6, 0.0)
+    zvel: jspb.Message.getFloatingPointFieldWithDefault(msg, 6, 0.0),
+    xang: jspb.Message.getFloatingPointFieldWithDefault(msg, 7, 0.0),
+    yang: jspb.Message.getFloatingPointFieldWithDefault(msg, 8, 0.0),
+    zang: jspb.Message.getFloatingPointFieldWithDefault(msg, 9, 0.0)
   };
 
   if (includeInstance) {
@@ -571,6 +628,18 @@ proto.Ball.deserializeBinaryFromReader = function(msg, reader) {
     case 6:
       var value = /** @type {number} */ (reader.readFloat());
       msg.setZvel(value);
+      break;
+    case 7:
+      var value = /** @type {number} */ (reader.readFloat());
+      msg.setXang(value);
+      break;
+    case 8:
+      var value = /** @type {number} */ (reader.readFloat());
+      msg.setYang(value);
+      break;
+    case 9:
+      var value = /** @type {number} */ (reader.readFloat());
+      msg.setZang(value);
       break;
     default:
       reader.skipField();
@@ -640,6 +709,27 @@ proto.Ball.serializeBinaryToWriter = function(message, writer) {
   if (f !== 0.0) {
     writer.writeFloat(
       6,
+      f
+    );
+  }
+  f = message.getXang();
+  if (f !== 0.0) {
+    writer.writeFloat(
+      7,
+      f
+    );
+  }
+  f = message.getYang();
+  if (f !== 0.0) {
+    writer.writeFloat(
+      8,
+      f
+    );
+  }
+  f = message.getZang();
+  if (f !== 0.0) {
+    writer.writeFloat(
+      9,
       f
     );
   }
@@ -733,6 +823,51 @@ proto.Ball.prototype.getZvel = function() {
 /** @param {number} value */
 proto.Ball.prototype.setZvel = function(value) {
   jspb.Message.setProto3FloatField(this, 6, value);
+};
+
+
+/**
+ * optional float Xang = 7;
+ * @return {number}
+ */
+proto.Ball.prototype.getXang = function() {
+  return /** @type {number} */ (jspb.Message.getFloatingPointFieldWithDefault(this, 7, 0.0));
+};
+
+
+/** @param {number} value */
+proto.Ball.prototype.setXang = function(value) {
+  jspb.Message.setProto3FloatField(this, 7, value);
+};
+
+
+/**
+ * optional float Yang = 8;
+ * @return {number}
+ */
+proto.Ball.prototype.getYang = function() {
+  return /** @type {number} */ (jspb.Message.getFloatingPointFieldWithDefault(this, 8, 0.0));
+};
+
+
+/** @param {number} value */
+proto.Ball.prototype.setYang = function(value) {
+  jspb.Message.setProto3FloatField(this, 8, value);
+};
+
+
+/**
+ * optional float Zang = 9;
+ * @return {number}
+ */
+proto.Ball.prototype.getZang = function() {
+  return /** @type {number} */ (jspb.Message.getFloatingPointFieldWithDefault(this, 9, 0.0));
+};
+
+
+/** @param {number} value */
+proto.Ball.prototype.setZang = function(value) {
+  jspb.Message.setProto3FloatField(this, 9, value);
 };
 
 
