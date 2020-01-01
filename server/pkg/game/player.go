@@ -12,8 +12,10 @@ func NewPlayerInfo(pct int) *pb.Player {
 		wall = pb.Player_BACK
 	}
 	return &pb.Player{
-		Xpos: 200,
-		Ypos: 200,
-		Wall: wall,
+		Xpos:  200,
+		Ypos:  200,
+		Xlast: 200,
+		Ylast: 200,
+		Wall:  wall,
 	}
 }
