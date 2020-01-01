@@ -20,6 +20,9 @@ func NewBallInfo() *pb.Ball {
 		Xvel: 0.7,
 		Yvel: 0.7,
 		Zvel: 0.7,
+		Xang: 0,
+		Yang: 0,
+		Zang: 0,
 	}
 }
 
@@ -64,6 +67,28 @@ func playerBallCollide(player *pb.Player, ball *pb.Ball) bool {
 	return (deltaX*deltaX + deltaY*deltaY) < (circle_radius * circle_radius)
 }
 
+func applySpin(ball *pb.Ball) {
+	// constant that dampens spin effect
+	multiple := float32(0.0002)
+
+	ball.Xvel += (ball.Yang*ball.Zvel - ball.Zang*ball.Yvel) * multiple
+	ball.Yvel += (ball.Zang*ball.Xvel - ball.Xang*ball.Zvel) * multiple
+
+	// additional constant for dampening spin affect z-velocity
+	// prevents ball from switching directions
+	zMultiple := float32(0.05)
+	ball.Zvel += (ball.Yang*ball.Xvel - ball.Xang*ball.Yvel) * multiple * zMultiple
+}
+
+// reset velocities, including angular velocity
+func resetVel(ball *pb.Ball) {
+	ball.Xang = 0
+	ball.Yang = 0
+	ball.Xvel = 0.7
+	ball.Yvel = 0.7
+	ball.Zvel = 0.7
+}
+
 func (g *GameLoop) Start() {
 	prev := time.Now()
 	ticker := time.NewTicker(16 * time.Millisecond)
@@ -82,6 +107,8 @@ func (g *GameLoop) Start() {
 				bounce := false
 				for _, player := range g.InfoMap {
 					if playerBallCollide(player, g.Ball) {
+						g.Ball.Xang = player.Ylast - player.Ypos
+						g.Ball.Yang = player.Xlast - player.Xpos
 						bounce = true
 						break
 					}
@@ -90,6 +117,7 @@ func (g *GameLoop) Start() {
 					g.Ball.Zvel *= -1
 				} else {
 					g.Ball.Zpos = 800
+					resetVel(g.Ball)
 				}
 			}
 
@@ -105,10 +133,13 @@ func (g *GameLoop) Start() {
 				g.Ball.Yvel *= -1
 			}
 
+			applySpin(g.Ball)
+
 			g.Ball.Xpos += float32(dt) * g.Ball.Xvel
 			g.Ball.Ypos += float32(dt) * g.Ball.Yvel
 			g.Ball.Zpos += float32(dt) * g.Ball.Zvel
 			data, err := proto.Marshal(&pb.GameState{Ball: g.Ball, Players: g.InfoMap, Timestamp: uint64(time.Now().UnixNano() / 1000000)})
+
 			if err != nil {
 				log.Fatal("marshaling error: ", err)
 			}
@@ -143,7 +174,12 @@ func (g *GameLoop) registerMove(action *communication.Action) {
 	}
 
 	if json.Valid([]byte(move)) {
-		json.Unmarshal([]byte(move), g.InfoMap[action.ID])
+		curPlayer := g.InfoMap[action.ID]
+		Xlast := curPlayer.Xpos
+		Ylast := curPlayer.Ypos
+		json.Unmarshal([]byte(move), curPlayer)
+		curPlayer.Xlast = Xlast
+		curPlayer.Ylast = Ylast
 
 	} else {
 		log.Println("got invalid JSON " + move)
