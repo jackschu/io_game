@@ -2,13 +2,13 @@ syntax = "proto3";
 
 message GameState {
   Ball ball = 1;
-  map<uint32, Player> players =2;
+  map<uint32, Player> players = 2;
   uint64 timestamp = 3;
 }
 
 message Player {
-  float Xpos =1;
-  float Ypos =2;
+  float Xpos = 1;
+  float Ypos = 2;
   float Xlast = 3;
   float Ylast = 4;
   enum Wall {
