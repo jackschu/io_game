@@ -2,28 +2,18 @@ package game
 
 import (
 	"encoding/json"
+	"github.com/golang/protobuf/proto"
 	"github.com/jackschu/io_game/pkg/communication"
+	pb "github.com/jackschu/io_game/pkg/proto"
 	"github.com/jackschu/io_game/pkg/websocket"
 	"log"
-	"math"
+	"sync/atomic"
 	"time"
 )
 
-type BallInfo struct {
-	Xpos float64
-	Ypos float64
-	Zpos float64
-	Xvel float64
-	Yvel float64
-	Zvel float64
-	Xang float64
-	Yang float64
-	Zang float64
-}
-
 // TODO replace cwith constant vars
-func NewBallInfo() *BallInfo {
-	return &BallInfo{
+func NewBallInfo() *pb.Ball {
+	return &pb.Ball{
 		Xpos: 750,
 		Ypos: 500,
 		Zpos: 0,
@@ -38,46 +28,60 @@ func NewBallInfo() *BallInfo {
 
 type GameLoop struct {
 	Room    *websocket.Room
-	InfoMap map[string]*PlayerInfo
-	Ball    *BallInfo
+	InfoMap map[uint32]*pb.Player
+	Ball    *pb.Ball
 }
 
 func NewGameLoop(room *websocket.Room) *GameLoop {
 	return &GameLoop{
 		Room:    room,
-		InfoMap: make(map[string]*PlayerInfo),
+		InfoMap: make(map[uint32]*pb.Player),
 		Ball:    NewBallInfo(),
 	}
 }
 
-func playerBallCollide(player *PlayerInfo, ball *BallInfo) bool {
+func max(x, y float32) float32 {
+	if x > y {
+		return x
+	}
+	return y
+}
+
+func min(x, y float32) float32 {
+	if x > y {
+		return y
+	}
+	return x
+}
+
+func playerBallCollide(player *pb.Player, ball *pb.Ball) bool {
 	// TODO replace player size with consts
-	player_size := 200.0
-	circle_radius := 50.0
+	player_size := float32(200.0)
+	circle_radius := float32(50.0)
 
 	rectX := player.Xpos - player_size/2
 	rectY := player.Ypos - player_size/2
 
-	deltaX := ball.Xpos - math.Max(rectX, math.Min(ball.Xpos, rectX+player_size))
-	deltaY := ball.Ypos - math.Max(rectY, math.Min(ball.Ypos, rectY+player_size))
+	deltaX := ball.Xpos - max(rectX, min(ball.Xpos, rectX+player_size))
+	deltaY := ball.Ypos - max(rectY, min(ball.Ypos, rectY+player_size))
 	return (deltaX*deltaX + deltaY*deltaY) < (circle_radius * circle_radius)
 }
 
-func applySpin(ball *BallInfo) {
+func applySpin(ball *pb.Ball) {
 	// constant that dampens spin effect
-	multiple := 0.0002
+	multiple := float32(0.0002)
 
 	ball.Xvel += (ball.Yang*ball.Zvel - ball.Zang*ball.Yvel) * multiple
 	ball.Yvel += (ball.Zang*ball.Xvel - ball.Xang*ball.Zvel) * multiple
 
 	// additional constant for dampening spin affect z-velocity
 	// prevents ball from switching directions
-	zMultiple := 0.05
+	zMultiple := float32(0.05)
 	ball.Zvel += (ball.Yang*ball.Xvel - ball.Xang*ball.Yvel) * multiple * zMultiple
 }
 
 // reset velocities, including angular velocity
-func resetVel(ball *BallInfo) {
+func resetVel(ball *pb.Ball) {
 	ball.Xang = 0
 	ball.Yang = 0
 	ball.Xvel = 0.7
@@ -86,8 +90,6 @@ func resetVel(ball *BallInfo) {
 }
 
 func (g *GameLoop) Start() {
-	go g.poll()
-
 	prev := time.Now()
 	ticker := time.NewTicker(16 * time.Millisecond)
 	for {
@@ -98,7 +100,7 @@ func (g *GameLoop) Start() {
 			prev = cur
 
 			// TODO replace hardd coded walls withshared consts
-			ball_radius := float64(50)
+			ball_radius := float32(50)
 			if g.Ball.Zpos > 800 && g.Ball.Zvel > 0 {
 				g.Ball.Zvel *= -1
 			} else if g.Ball.Zpos < 0 && -2*ball_radius < g.Ball.Zpos && g.Ball.Zvel < 0 {
@@ -132,27 +134,25 @@ func (g *GameLoop) Start() {
 			}
 
 			applySpin(g.Ball)
-			g.Ball.Xpos += float64(dt) * g.Ball.Xvel
-			g.Ball.Ypos += float64(dt) * g.Ball.Yvel
-			g.Ball.Zpos += float64(dt) * g.Ball.Zvel
-			players_bytes, err := json.Marshal(g.InfoMap)
+
+			g.Ball.Xpos += float32(dt) * g.Ball.Xvel
+			g.Ball.Ypos += float32(dt) * g.Ball.Yvel
+			g.Ball.Zpos += float32(dt) * g.Ball.Zvel
+			data, err := proto.Marshal(&pb.GameState{Ball: g.Ball, Players: g.InfoMap, Timestamp: uint64(time.Now().UnixNano() / 1000000)})
+
 			if err != nil {
-				log.Println(err)
-			}
-			ball_bytes, err := json.Marshal(g.Ball)
-			if err != nil {
-				log.Println(err)
-			}
-			pre_json_out := map[string]string{
-				"players": string(players_bytes),
-				"ball":    string(ball_bytes),
+				log.Fatal("marshaling error: ", err)
 			}
 
-			json_out, err := json.Marshal(pre_json_out)
-			if err != nil {
-				log.Println(err)
-			} else {
-				g.Room.Broadcast <- *websocket.NewMessage(string(json_out))
+			g.Room.Broadcast <- data
+
+			for i := 0; i < int(atomic.LoadUint32(&g.Room.PlayerCount))+2; i++ {
+				select {
+				case action := <-g.Room.Actions:
+					g.registerMove(action)
+				default:
+					break
+				}
 			}
 		}
 
@@ -160,17 +160,12 @@ func (g *GameLoop) Start() {
 
 }
 
-func (g *GameLoop) poll() {
-	for {
-		action := <-g.Room.Actions
-		go g.registerMove(action)
-	}
-}
-
 func (g *GameLoop) registerMove(action *communication.Action) {
 	move := action.Move
 	if move == "join" {
-		g.InfoMap[action.ID] = NewPlayerInfo(action.ID)
+		pct := int(atomic.LoadUint32(&g.Room.PlayerCount))
+		g.InfoMap[action.ID] = NewPlayerInfo(pct)
+
 		return
 	}
 	if move == "leave" {

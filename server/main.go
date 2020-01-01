@@ -1,10 +1,8 @@
 package main
 
 import (
-	"github.com/jackschu/io_game/pkg/websocket"
-	"github.com/lithammer/shortuuid/v3"
-
 	"github.com/jackschu/io_game/pkg/game"
+	"github.com/jackschu/io_game/pkg/websocket"
 	"log"
 	"net/http"
 )
@@ -17,9 +15,9 @@ func serveWs(room *websocket.Room, w http.ResponseWriter, r *http.Request) {
 	}
 	// helpful log statement to show connections
 	log.Println("Client Connected")
-
+	id := <-room.PlayerIDs
 	client := &websocket.Client{
-		ID:   shortuuid.New(),
+		ID:   id,
 		Conn: conn,
 		Room: room,
 	}

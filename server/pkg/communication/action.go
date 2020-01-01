@@ -1,6 +1,6 @@
 package communication
 
 type Action struct {
-	ID   string
+	ID   uint32
 	Move string
 }

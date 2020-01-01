@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+message GameState {
+  Ball ball = 1;
+  map<uint32, Player> players =2;
+  uint64 timestamp = 3;
+}
+
+message Player {
+  float Xpos =1;
+  float Ypos =2;
+  float Xlast = 3;
+  float Ylast = 4;
+  enum Wall {
+	FRONT = 0;
+	BACK = 1;
+  }
+  Wall wall = 5;
+}
+
+message Ball {
+  float Xpos = 1;
+  float Ypos = 2;
+  float Zpos = 3;
+  float Xvel = 4;
+  float Yvel = 5;
+  float Zvel = 6;
+  float Xang = 7;
+  float Yang = 8;
+  float Zang = 9;
+}

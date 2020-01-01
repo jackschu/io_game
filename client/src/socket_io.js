@@ -21,5 +21,6 @@ socket.onmessage = event => {
 socket.onerror = error => {
     console.log('Socket Error: ', error);
 };
+socket.binaryType = 'arraybuffer';
 
 export { socket };

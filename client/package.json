@@ -7,7 +7,8 @@
         "test": "echo \"Error: no test specified\" && exit 1",
         "build": "webpack --mode production",
         "dev": "webpack --mode development",
-        "start": "yarn dev && webpack-dev-server --open"
+        "start": "yarn dev && webpack-dev-server --open",
+        "proto": "protoc updates.proto --proto_path=../proto --go_out=../server/pkg/proto --js_out=import_style=commonjs,binary:../client/src"
     },
     "husky": {
         "hooks": {
@@ -15,7 +16,7 @@
         }
     },
     "lint-staged": {
-        "**/*.js": [
+        "**/*.js, !(**/*_pb.js)": [
             "eslint --fix --ignore-path ../.gitignore",
             "git add"
         ],
@@ -33,6 +34,7 @@
         "eslint-plugin-prettier": "^3.1.2",
         "favicons-webpack-plugin": "^1.0.2",
         "file-loader": "^5.0.2",
+        "google-protobuf": "^3.11.2",
         "html-webpack-plugin": "^3.2.0",
         "husky": "^3.1.0",
         "lint-staged": "^9.5.0",

@@ -4,10 +4,11 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/jackschu/io_game/pkg/communication"
 	"log"
+	"sync/atomic"
 )
 
 type Client struct {
-	ID   string
+	ID   uint32
 	Conn *websocket.Conn
 	Room *Room
 }
@@ -24,6 +25,11 @@ func (c *Client) Read() {
 			log.Println(err)
 			return
 		}
-		c.Room.Actions <- &communication.Action{ID: c.ID, Move: string(p)}
+		select {
+		case c.Room.Actions <- &communication.Action{ID: c.ID, Move: string(p)}:
+		default:
+			log.Println("channel full, num players:",
+				atomic.LoadUint32(&c.Room.PlayerCount))
+		}
 	}
 }
