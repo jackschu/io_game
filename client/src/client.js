@@ -118,7 +118,7 @@ function gameLoop(delta) {
     }
 
     for (const key of Object.keys(players)) {
-        players[key].update(playerSize);
+        players[key].update(playerSize, yourWall, playerWalls[key]);
     }
 
     if (ball) {
