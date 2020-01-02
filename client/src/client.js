@@ -53,7 +53,7 @@ socket.onmessage = event => {
 
     let ballData = pbObject.ball;
     if (ball === undefined) {
-        console.log(pbObject.ball);
+        console.log('new ball', pbObject.ball);
         ball = new Ball(ballData.zpos);
         app.stage.addChild(ball.pixiObj);
     }
@@ -62,7 +62,10 @@ socket.onmessage = event => {
 
 function moveHandler(e) {
     let now = new Date().getTime();
-    if (lastSendTimestamp && now - lastSendTimestamp < 1000 / Constants.SEND_FPS) {
+    if (
+        lastSendTimestamp &&
+        now - lastSendTimestamp < 1000 / Constants.SEND_FPS
+    ) {
         return;
     }
     lastSendTimestamp = now;
@@ -93,7 +96,7 @@ function gameLoop(delta) {
     if (delta > 1.1) {
         console.log(delta);
     }
-    
+
     for (const key of Object.keys(players)) {
         players[key].update(playerSize);
     }
@@ -111,13 +114,17 @@ function resize() {
         window.innerWidth / Constants.WIDTH,
         window.innerHeight / Constants.HEIGHT
     );
-    
+
     app.renderer.resize(window.innerWidth, window.innerHeight);
     app.stage.scale.x = app.stage.scale.y = ratio;
-    
+
     playerSize = Math.min(
-        (app.screen.height * Constants.VIRTUAL_PLAYER_SIZE) / Constants.HEIGHT / ratio,
-        (app.screen.width * Constants.VIRTUAL_PLAYER_SIZE) / Constants.WIDTH / ratio
+        (app.screen.height * Constants.VIRTUAL_PLAYER_SIZE) /
+            Constants.HEIGHT /
+            ratio,
+        (app.screen.width * Constants.VIRTUAL_PLAYER_SIZE) /
+            Constants.WIDTH /
+            ratio
     );
 
     // TODO Move container to the center
