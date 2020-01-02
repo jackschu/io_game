@@ -2,17 +2,20 @@ import * as PIXI from 'pixi.js-legacy';
 import { generateCurrentState } from './states';
 import { pointProject } from './utils';
 import Constants from '../../Constants';
-
+import updates from './updates_pb';
 export class Ball {
     constructor(zPos) {
         this.pixiObj = new PIXI.Graphics();
         this.zPos = zPos;
     }
 
-    update() {
+    update(povWall) {
         let curState = generateCurrentState(this);
         if (curState === null) {
             return;
+        }
+        if (povWall === updates.Wall.BACK) {
+            curState.zpos = Constants.DEPTH - curState.zpos;
         }
         let [x0, _] = pointProject(
             Constants.BALL_RADIUS + Constants.WIDTH / 2,

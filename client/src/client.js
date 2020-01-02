@@ -122,7 +122,7 @@ function gameLoop(delta) {
     }
 
     if (ball) {
-        ball.update();
+        ball.update(yourWall);
         depthIndicator.update(ball.zPos);
     }
 }

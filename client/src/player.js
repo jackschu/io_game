@@ -22,13 +22,13 @@ export class Player {
         this.pixiObj.addChild(this.nameText);
     }
 
-    update(size, ourwall, theirwall) {
+    update(size, ourWall, theirWall) {
         let curState = generateCurrentState(this);
         if (curState === null) {
             return;
         }
 
-        if (ourwall != theirwall) {
+        if (ourWall != theirWall) {
             let [x0, _] = pointProject(
                 Constants.VIRTUAL_PLAYER_SIZE / 2 + Constants.WIDTH / 2,
                 0,
