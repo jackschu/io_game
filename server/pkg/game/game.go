@@ -205,6 +205,14 @@ func (g *GameLoop) registerMove(action *communication.Action) {
 		wall := g.getOpenWall()
 		g.PlayerMetadata[action.ID] = &PlayerMetadata{WallNum: wall}
 		g.MetaMux.Unlock()
+		
+		data, err := proto.Marshal(&pb.GameStart{YourID: action.ID,
+			Wall: pb.GameStart_Wall(wall)})
+		if err != nil {
+			log.Fatal("join marshaling error: ", err)
+		}
+
+		g.Room.Updates <- &communication.SingleMessage{ID:action.ID, Data: data}
 		return
 	}
 	if move == "leave" {

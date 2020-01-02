@@ -11,11 +11,6 @@ message Player {
   float Ypos = 2;
   float Xlast = 3;
   float Ylast = 4;
-  enum Wall {
-	FRONT = 0;
-	BACK = 1;
-  }
-  Wall wall = 5;
 }
 
 message Ball {
@@ -28,4 +23,13 @@ message Ball {
   float Xang = 7;
   float Yang = 8;
   float Zang = 9;
+}
+
+message GameStart {
+  uint32 YourID = 1;
+  enum Wall {
+	FRONT = 0;
+	BACK = 1;
+  }
+  Wall wall = 2;  
 }
