@@ -204,14 +204,23 @@ func (g *GameLoop) registerMove(action *communication.Action) {
 		g.MetaMux.Lock()
 		wall := g.getOpenWall()
 		g.PlayerMetadata[action.ID] = &PlayerMetadata{WallNum: wall}
+		wall_map := make(map[uint32]pb.Wall)
+		for id, metadata := range g.PlayerMetadata {
+			wall_map[id] = pb.Wall(metadata.WallNum)
+		}
 		g.MetaMux.Unlock()
 
-		data, err := proto.Marshal(&pb.AnyMessage{Data: &pb.AnyMessage_Start{Start: &pb.GameStart{YourID: action.ID, Wall: pb.GameStart_Wall(wall)}}})
+		data, err := proto.Marshal(&pb.AnyMessage{Data: &pb.AnyMessage_Start{Start: &pb.GameStart{YourID: action.ID, Wall: pb.Wall(wall)}}})
 		if err != nil {
 			log.Fatal("join marshaling error: ", err)
 		}
 
 		g.Room.Updates <- &communication.SingleMessage{ID: action.ID, Data: data}
+		data, err = proto.Marshal(&pb.AnyMessage{Data: &pb.AnyMessage_Join{Join: &pb.PlayerJoin{PlayerWalls: wall_map}}})
+		if err != nil {
+			log.Fatal("join broadcast marshaling error: ", err)
+		}
+		g.Room.Broadcast <- data
 		return
 	}
 	if move == "leave" {

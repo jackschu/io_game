@@ -13,7 +13,9 @@ let ball;
 let depthIndicator;
 let playerSize;
 let lastSendTimestamp;
-
+let yourServerId;
+let yourWall;
+let playerWalls = {};
 let app = new PIXI.Application({
     antialias: true,
     transparent: false,
@@ -63,9 +65,18 @@ socket.onmessage = event => {
             break;
         case updates.AnyMessage.DataCase.START:
             let pbStartMessage = pbMessage.getStart();
-            console.log(pbStartMessage);
+            yourServerId = pbStartMessage.getYourid();
+            yourWall = pbStartMessage.getWall();
+            break;
+        case updates.AnyMessage.DataCase.JOIN:
+            let pbJoinMessage = pbMessage.getJoin();
+            let wallsArray = pbJoinMessage.toObject().playerwallsMap;
+            for (const [id, wall] of wallsArray) {
+                playerWalls[String(id)] = wall;
+            }
+            break;
         default:
-            console.log('got invalid message');
+            console.log('got invalid message', pbMessage);
     }
 };
 

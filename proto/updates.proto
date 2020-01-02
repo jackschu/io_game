@@ -4,6 +4,7 @@ message AnyMessage {
   oneof data {
 	GameState state = 1;
 	GameStart start = 2;
+	PlayerJoin join = 3;
   }
 }
 
@@ -35,9 +36,14 @@ message Ball {
 
 message GameStart {
   uint32 YourID = 1;
-  enum Wall {
-	FRONT = 0;
-	BACK = 1;
-  }
   Wall wall = 2;  
+}
+
+message PlayerJoin {
+  map<uint32, Wall> playerWalls = 1;
+}
+
+enum Wall {
+  FRONT = 0;
+  BACK = 1;
 }
