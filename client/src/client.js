@@ -7,7 +7,7 @@ import { Player } from './player';
 import { Ball } from './ball';
 import Constants from '../../Constants';
 import updates from './updates_pb';
-
+var jspb = require('google-protobuf');
 let players = {};
 let ball;
 let depthIndicator;
@@ -26,43 +26,55 @@ document.body.appendChild(app.view);
 window.addEventListener('resize', resize);
 
 socket.onmessage = event => {
-    let pbState = updates.GameState.deserializeBinary(event.data);
+    let pbMessage = updates.AnyMessage.deserializeBinary(event.data);
+    switch (pbMessage.getDataCase()) {
+        case updates.AnyMessage.DataCase.STATE:
+            let pbState = pbMessage.getState();
+            let pbObject = pbState.toObject();
+            let timestamp = pbObject.timestamp;
+            let rawPlayerData = pbObject.playersMap;
 
-    let pbObject = pbState.toObject();
-    let timestamp = pbObject.timestamp;
-    let rawPlayerData = pbObject.playersMap;
+            let incomingPlayers = new Set();
 
-    let incomingPlayers = new Set();
+            for (const [keyI, data] of rawPlayerData) {
+                let key = String(keyI);
+                incomingPlayers.add(key);
+                if (players[key] === undefined) {
+                    players[key] = new Player(key, playerSize);
+                    app.stage.addChild(players[key].pixiObj);
+                }
+                addState(data, timestamp, players[key]);
+            }
 
-    for (const [keyI, data] of rawPlayerData) {
-        let key = String(keyI);
-        incomingPlayers.add(key);
-        if (players[key] === undefined) {
-            players[key] = new Player(key, playerSize);
-            app.stage.addChild(players[key].pixiObj);
-        }
-        addState(data, timestamp, players[key]);
+            for (const key in players) {
+                if (!incomingPlayers.has(key)) {
+                    players[key].destroy();
+                    delete players[key];
+                }
+            }
+
+            let ballData = pbObject.ball;
+            if (ball === undefined) {
+                console.log(pbObject.ball);
+                ball = new Ball(ballData.zpos);
+                app.stage.addChild(ball.pixiObj);
+            }
+            addState(ballData, timestamp, ball);
+            break;
+        case updates.AnyMessage.DataCase.START:
+            let pbStartMessage = pbMessage.getStart();
+            console.log(pbStartMessage);
+        default:
+            console.log('got invalid message');
     }
-
-    for (const key in players) {
-        if (!incomingPlayers.has(key)) {
-            players[key].destroy();
-            delete players[key];
-        }
-    }
-
-    let ballData = pbObject.ball;
-    if (ball === undefined) {
-        console.log(pbObject.ball);
-        ball = new Ball(ballData.zpos);
-        app.stage.addChild(ball.pixiObj);
-    }
-    addState(ballData, timestamp, ball);
 };
 
 function moveHandler(e) {
     let now = new Date().getTime();
-    if (lastSendTimestamp && now - lastSendTimestamp < 1000 / Constants.SEND_FPS) {
+    if (
+        lastSendTimestamp &&
+        now - lastSendTimestamp < 1000 / Constants.SEND_FPS
+    ) {
         return;
     }
     lastSendTimestamp = now;
@@ -93,7 +105,7 @@ function gameLoop(delta) {
     if (delta > 1.1) {
         console.log(delta);
     }
-    
+
     for (const key of Object.keys(players)) {
         players[key].update(playerSize);
     }
@@ -111,13 +123,17 @@ function resize() {
         window.innerWidth / Constants.WIDTH,
         window.innerHeight / Constants.HEIGHT
     );
-    
+
     app.renderer.resize(window.innerWidth, window.innerHeight);
     app.stage.scale.x = app.stage.scale.y = ratio;
-    
+
     playerSize = Math.min(
-        (app.screen.height * Constants.VIRTUAL_PLAYER_SIZE) / Constants.HEIGHT / ratio,
-        (app.screen.width * Constants.VIRTUAL_PLAYER_SIZE) / Constants.WIDTH / ratio
+        (app.screen.height * Constants.VIRTUAL_PLAYER_SIZE) /
+            Constants.HEIGHT /
+            ratio,
+        (app.screen.width * Constants.VIRTUAL_PLAYER_SIZE) /
+            Constants.WIDTH /
+            ratio
     );
 
     // TODO Move container to the center
