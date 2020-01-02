@@ -225,6 +225,7 @@ func (g *GameLoop) registerMove(action *communication.Action) {
 	}
 	if move == "leave" {
 		delete(g.InfoMap, action.ID)
+		delete(g.PlayerMetadata, action.ID)
 		return
 	}
 

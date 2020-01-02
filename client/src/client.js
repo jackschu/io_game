@@ -51,6 +51,7 @@ socket.onmessage = event => {
             for (const key in players) {
                 if (!incomingPlayers.has(key)) {
                     players[key].destroy();
+                    delete playerWalls[key];
                     delete players[key];
                 }
             }
