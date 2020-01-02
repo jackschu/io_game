@@ -68,7 +68,8 @@ export function generateCurrentState(obj) {
             (nextState.timestamp - curState.timestamp);
         return interpolate(curState, nextState, ratio);
     } else {
-        return curState.data;
+        // assume curState.data is non-circular, return copy
+        return JSON.parse(JSON.stringify(curState.data));
     }
 }
 
