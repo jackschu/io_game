@@ -129,12 +129,13 @@ func (g *GameLoop) Start() {
 				if bounce {
 					g.Ball.Zvel *= -1
 				} else {
+					resetVel(g.Ball)
 					if ball_back {
 						g.Ball.Zpos = 0
 					} else if ball_front {
 						g.Ball.Zpos = 800
+						g.Ball.Zvel *= -1
 					}
-					resetVel(g.Ball)
 				}
 			}
 
