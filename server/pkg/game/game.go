@@ -155,8 +155,8 @@ func (g *GameLoop) Start() {
 			g.Ball.Xpos += float32(dt) * g.Ball.Xvel
 			g.Ball.Ypos += float32(dt) * g.Ball.Yvel
 			g.Ball.Zpos += float32(dt) * g.Ball.Zvel
-			data, err := proto.Marshal(&pb.GameState{Ball: g.Ball, Players: g.InfoMap,
-				Timestamp: uint64(time.Now().UnixNano() / 1000000)})
+			data, err := proto.Marshal(&pb.AnyMessage{Data: &pb.AnyMessage_State{State: &pb.GameState{Ball: g.Ball, Players: g.InfoMap,
+				Timestamp: uint64(time.Now().UnixNano() / 1000000)}}})
 
 			if err != nil {
 				log.Fatal("marshaling error: ", err)
@@ -205,14 +205,13 @@ func (g *GameLoop) registerMove(action *communication.Action) {
 		wall := g.getOpenWall()
 		g.PlayerMetadata[action.ID] = &PlayerMetadata{WallNum: wall}
 		g.MetaMux.Unlock()
-		
-		data, err := proto.Marshal(&pb.GameStart{YourID: action.ID,
-			Wall: pb.GameStart_Wall(wall)})
+
+		data, err := proto.Marshal(&pb.AnyMessage{Data: &pb.AnyMessage_Start{Start: &pb.GameStart{YourID: action.ID, Wall: pb.GameStart_Wall(wall)}}})
 		if err != nil {
 			log.Fatal("join marshaling error: ", err)
 		}
 
-		g.Room.Updates <- &communication.SingleMessage{ID:action.ID, Data: data}
+		g.Room.Updates <- &communication.SingleMessage{ID: action.ID, Data: data}
 		return
 	}
 	if move == "leave" {

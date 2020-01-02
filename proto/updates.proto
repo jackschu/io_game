@@ -1,5 +1,13 @@
 syntax = "proto3";
 
+message AnyMessage {
+  oneof data {
+	GameState state = 1;
+	GameStart start = 2;
+  }
+}
+
+
 message GameState {
   Ball ball = 1;
   map<uint32, Player> players = 2;

@@ -6,6 +6,6 @@ type Action struct {
 }
 
 type SingleMessage struct {
-	ID uint32
+	ID   uint32
 	Data []byte
 }
