@@ -9,6 +9,7 @@ type Queue struct {
 	clients   []*Client
 	clientSet map[*Client]bool
 	roomSize  int
+	PlayerIDs chan uint32
 }
 
 func NewQueue(roomSize int) *Queue {
@@ -16,6 +17,7 @@ func NewQueue(roomSize int) *Queue {
 		clients:   make([]*Client, 0),
 		clientSet: make(map[*Client]bool),
 		roomSize:  roomSize,
+		PlayerIDs: make(chan uint32, 3),
 	}
 }
 
@@ -47,6 +49,7 @@ func (queue *Queue) RemoveClient(client *Client) {
 }
 
 func (queue *Queue) Delegate() {
+	go queue.idCounter()
 	ticker := time.NewTicker(16 * time.Millisecond)
 	for {
 		select {
@@ -66,5 +69,13 @@ func (queue *Queue) Delegate() {
 				go game.Start()
 			}
 		}
+	}
+}
+
+func (queue *Queue) idCounter() {
+	counter := uint32(0)
+	for {
+		queue.PlayerIDs <- counter
+		counter += 1
 	}
 }

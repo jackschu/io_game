@@ -11,11 +11,10 @@ import (
 )
 
 type Room struct {
-	GameLoop  *game.GameLoop
-	Joining   chan *Client
-	Leaving   chan *Client
-	Clients   map[*Client]bool
-	PlayerIDs chan uint32
+	GameLoop *game.GameLoop
+	Joining  chan *Client
+	Leaving  chan *Client
+	Clients  map[*Client]bool
 }
 
 type Message struct {
@@ -25,16 +24,14 @@ type Message struct {
 
 func NewRoom(gameLoop *game.GameLoop) *Room {
 	return &Room{
-		GameLoop:  gameLoop,
-		Joining:   make(chan *Client),
-		Leaving:   make(chan *Client),
-		Clients:   make(map[*Client]bool),
-		PlayerIDs: make(chan uint32, 3),
+		GameLoop: gameLoop,
+		Joining:  make(chan *Client),
+		Leaving:  make(chan *Client),
+		Clients:  make(map[*Client]bool),
 	}
 }
 
 func (room *Room) Start() {
-	go room.idCounter()
 	for {
 		select {
 		case client := <-room.Joining:
@@ -63,12 +60,4 @@ func (room *Room) Start() {
 		}
 	}
 
-}
-
-func (room *Room) idCounter() {
-	counter := uint32(0)
-	for {
-		room.PlayerIDs <- counter
-		counter += 1
-	}
 }

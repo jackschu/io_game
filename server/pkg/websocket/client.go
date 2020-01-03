@@ -8,9 +8,10 @@ import (
 )
 
 type Client struct {
-	ID   uint32
-	Conn *websocket.Conn
-	Room *Room
+	ID    uint32
+	Conn  *websocket.Conn
+	Room  *Room
+	Queue *Queue
 }
 
 func (c *Client) Read() {
@@ -25,6 +26,11 @@ func (c *Client) Read() {
 			log.Println(err)
 			return
 		}
+
+		if c.Room == nil {
+			continue
+		}
+
 		select {
 		case c.Room.GameLoop.Actions <- &communication.Action{ID: c.ID, Move: string(p)}:
 		default:
