@@ -26,10 +26,10 @@ func (c *Client) Read() {
 			return
 		}
 		select {
-		case c.Room.Actions <- &communication.Action{ID: c.ID, Move: string(p)}:
+		case c.Room.GameLoop.Actions <- &communication.Action{ID: c.ID, Move: string(p)}:
 		default:
 			log.Println("channel full, num players:",
-				atomic.LoadUint32(&c.Room.PlayerCount))
+				atomic.LoadUint32(&c.Room.GameLoop.PlayerCount))
 		}
 	}
 }

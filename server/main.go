@@ -26,10 +26,10 @@ func serveWs(room *websocket.Room, w http.ResponseWriter, r *http.Request) {
 }
 
 func setupRoutes() {
-	room := websocket.NewRoom()
-	go room.Start()
-	game := game.NewGameLoop(room)
+	game := game.NewGameLoop()
 	go game.Start()
+	room := websocket.NewRoom(game)
+	go room.Start()
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(room, w, r)
 	})

@@ -5,7 +5,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/jackschu/io_game/pkg/communication"
 	pb "github.com/jackschu/io_game/pkg/proto"
-	"github.com/jackschu/io_game/pkg/websocket"
 	"log"
 	"sync/atomic"
 	"time"
@@ -27,16 +26,20 @@ func NewBallInfo() *pb.Ball {
 }
 
 type GameLoop struct {
-	Room    *websocket.Room
-	InfoMap map[uint32]*pb.Player
-	Ball    *pb.Ball
+	Actions     chan *communication.Action
+	PlayerCount uint32
+	Broadcast   chan []byte
+	InfoMap     map[uint32]*pb.Player
+	Ball        *pb.Ball
 }
 
-func NewGameLoop(room *websocket.Room) *GameLoop {
+func NewGameLoop() *GameLoop {
 	return &GameLoop{
-		Room:    room,
-		InfoMap: make(map[uint32]*pb.Player),
-		Ball:    NewBallInfo(),
+		Broadcast:   make(chan []byte),
+		Actions:     make(chan *communication.Action, 8),
+		PlayerCount: 0,
+		InfoMap:     make(map[uint32]*pb.Player),
+		Ball:        NewBallInfo(),
 	}
 }
 
@@ -144,11 +147,10 @@ func (g *GameLoop) Start() {
 				log.Fatal("marshaling error: ", err)
 			}
 
-			g.Room.Broadcast <- data
-
-			for i := 0; i < int(atomic.LoadUint32(&g.Room.PlayerCount))+2; i++ {
+			g.Broadcast <- data
+			for i := 0; i < int(atomic.LoadUint32(&g.PlayerCount))+2; i++ {
 				select {
-				case action := <-g.Room.Actions:
+				case action := <-g.Actions:
 					g.registerMove(action)
 				default:
 					break
@@ -163,7 +165,7 @@ func (g *GameLoop) Start() {
 func (g *GameLoop) registerMove(action *communication.Action) {
 	move := action.Move
 	if move == "join" {
-		pct := int(atomic.LoadUint32(&g.Room.PlayerCount))
+		pct := int(atomic.LoadUint32(&g.PlayerCount))
 		g.InfoMap[action.ID] = NewPlayerInfo(pct)
 
 		return
