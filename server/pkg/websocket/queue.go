@@ -3,7 +3,6 @@ package websocket
 import (
 	"github.com/jackschu/io_game/pkg/game"
 	"sync"
-	"time"
 )
 
 type Queue struct {
@@ -15,13 +14,15 @@ type Queue struct {
 }
 
 func NewQueue(roomSize int) *Queue {
-	return &Queue{
+	newQueue := &Queue{
 		clients:   make([]*Client, 0),
 		clientSet: make(map[*Client]bool),
 		roomSize:  roomSize,
 		PlayerIDs: make(chan uint32, 3),
 		mux:       &sync.Mutex{},
 	}
+	go newQueue.idCounter()
+	return newQueue
 }
 
 func (queue *Queue) AddClient(client *Client) {
@@ -32,6 +33,10 @@ func (queue *Queue) AddClient(client *Client) {
 	}
 	queue.clients = append(queue.clients, client)
 	queue.clientSet[client] = true
+
+	if len(queue.clients) >= queue.roomSize {
+		queue.Delegate()
+	}
 }
 
 func (queue *Queue) RemoveClient(client *Client) {
@@ -56,30 +61,19 @@ func (queue *Queue) RemoveClient(client *Client) {
 }
 
 func (queue *Queue) Delegate() {
-	go queue.idCounter()
-	ticker := time.NewTicker(16 * time.Millisecond)
-	for {
-		select {
-		case <-ticker.C:
-			queue.mux.Lock()
-			if len(queue.clients) >= queue.roomSize {
-				game := game.NewGameLoop()
-				room := NewRoom(game)
-				go room.Start()
+	game := game.NewGameLoop()
+	room := NewRoom(game)
+	go room.Start()
 
-				for i := 0; i < queue.roomSize; i++ {
-					curClient := queue.clients[0]
-					curClient.Room = room
-					room.Joining <- curClient
-					queue.clients = queue.clients[1:]
-					delete(queue.clientSet, curClient)
-				}
-
-				go game.Start()
-			}
-			queue.mux.Unlock()
-		}
+	for i := 0; i < queue.roomSize; i++ {
+		curClient := queue.clients[0]
+		curClient.Room = room
+		room.Joining <- curClient
+		queue.clients = queue.clients[1:]
+		delete(queue.clientSet, curClient)
 	}
+
+	go game.Start()
 }
 
 func (queue *Queue) idCounter() {
