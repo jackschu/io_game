@@ -26,20 +26,24 @@ func NewBallInfo() *pb.Ball {
 }
 
 type GameLoop struct {
-	Actions     chan *communication.Action
-	PlayerCount uint32
-	Broadcast   chan []byte
-	InfoMap     map[uint32]*pb.Player
-	Ball        *pb.Ball
+	Actions        chan *communication.Action
+	Updates        chan *communication.SingleMessage
+	PlayerCount    uint32
+	Broadcast      chan []byte
+	InfoMap        map[uint32]*pb.Player
+	Ball           *pb.Ball
+	PlayerMetadata map[uint32]*PlayerMetadata
 }
 
 func NewGameLoop() *GameLoop {
 	return &GameLoop{
-		Broadcast:   make(chan []byte),
-		Actions:     make(chan *communication.Action, 8),
-		PlayerCount: 0,
-		InfoMap:     make(map[uint32]*pb.Player),
-		Ball:        NewBallInfo(),
+		Broadcast:      make(chan []byte),
+		Actions:        make(chan *communication.Action, 8),
+		Updates:        make(chan *communication.SingleMessage, 2),
+		PlayerCount:    0,
+		InfoMap:        make(map[uint32]*pb.Player),
+		Ball:           NewBallInfo(),
+		PlayerMetadata: make(map[uint32]*PlayerMetadata),
 	}
 }
 
@@ -104,11 +108,20 @@ func (g *GameLoop) Start() {
 
 			// TODO replace hardd coded walls withshared consts
 			ball_radius := float32(50)
-			if g.Ball.Zpos > 800 && g.Ball.Zvel > 0 {
-				g.Ball.Zvel *= -1
-			} else if g.Ball.Zpos < 0 && -2*ball_radius < g.Ball.Zpos && g.Ball.Zvel < 0 {
+			ball_back := g.Ball.Zpos > 800 && 800+2*ball_radius > g.Ball.Zpos &&
+				g.Ball.Zvel > 0
+
+			ball_front := g.Ball.Zpos < 0 && -2*ball_radius < g.Ball.Zpos &&
+				g.Ball.Zvel < 0
+
+			if ball_back || ball_front {
 				bounce := false
-				for _, player := range g.InfoMap {
+				for id, player := range g.InfoMap {
+					playerWall := g.PlayerMetadata[id].WallNum
+					if !((playerWall == 0 && ball_front) ||
+						(playerWall == 1 && ball_back)) {
+						continue
+					}
 					if playerBallCollide(player, g.Ball) {
 						g.Ball.Xang = player.Ylast - player.Ypos
 						g.Ball.Yang = player.Xlast - player.Xpos
@@ -119,8 +132,13 @@ func (g *GameLoop) Start() {
 				if bounce {
 					g.Ball.Zvel *= -1
 				} else {
-					g.Ball.Zpos = 800
 					resetVel(g.Ball)
+					if ball_back {
+						g.Ball.Zpos = 0
+					} else if ball_front {
+						g.Ball.Zpos = 800
+						g.Ball.Zvel *= -1
+					}
 				}
 			}
 
@@ -141,7 +159,8 @@ func (g *GameLoop) Start() {
 			g.Ball.Xpos += float32(dt) * g.Ball.Xvel
 			g.Ball.Ypos += float32(dt) * g.Ball.Yvel
 			g.Ball.Zpos += float32(dt) * g.Ball.Zvel
-			data, err := proto.Marshal(&pb.GameState{Ball: g.Ball, Players: g.InfoMap, Timestamp: uint64(time.Now().UnixNano() / 1000000)})
+			data, err := proto.Marshal(&pb.AnyMessage{Data: &pb.AnyMessage_State{State: &pb.GameState{Ball: g.Ball, Players: g.InfoMap,
+				Timestamp: uint64(time.Now().UnixNano() / 1000000)}}})
 
 			if err != nil {
 				log.Fatal("marshaling error: ", err)
@@ -162,16 +181,52 @@ func (g *GameLoop) Start() {
 
 }
 
+func (g *GameLoop) getOpenWall() int {
+	front_count := 0
+	back_count := 0
+	for _, data := range g.PlayerMetadata {
+		if data.WallNum == 0 {
+			front_count++
+		} else if data.WallNum == 1 {
+			back_count++
+		} else {
+			log.Println("invalid wall num found")
+		}
+	}
+	if front_count < back_count {
+		return 0
+	} else {
+		return 1
+	}
+}
+
 func (g *GameLoop) registerMove(action *communication.Action) {
 	move := action.Move
 	if move == "join" {
-		pct := int(atomic.LoadUint32(&g.PlayerCount))
-		g.InfoMap[action.ID] = NewPlayerInfo(pct)
+		g.InfoMap[action.ID] = NewPlayerInfo()
+		wall := g.getOpenWall()
+		g.PlayerMetadata[action.ID] = &PlayerMetadata{WallNum: wall}
+		wall_map := make(map[uint32]pb.Wall)
+		for id, metadata := range g.PlayerMetadata {
+			wall_map[id] = pb.Wall(metadata.WallNum)
+		}
 
+		data, err := proto.Marshal(&pb.AnyMessage{Data: &pb.AnyMessage_Start{Start: &pb.GameStart{YourID: action.ID, Wall: pb.Wall(wall)}}})
+		if err != nil {
+			log.Fatal("join marshaling error: ", err)
+		}
+
+		g.Updates <- &communication.SingleMessage{ID: action.ID, Data: data}
+		data, err = proto.Marshal(&pb.AnyMessage{Data: &pb.AnyMessage_Join{Join: &pb.PlayerJoin{PlayerWalls: wall_map}}})
+		if err != nil {
+			log.Fatal("join broadcast marshaling error: ", err)
+		}
+		g.Broadcast <- data
 		return
 	}
 	if move == "leave" {
 		delete(g.InfoMap, action.ID)
+		delete(g.PlayerMetadata, action.ID)
 		return
 	}
 

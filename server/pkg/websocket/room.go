@@ -14,7 +14,7 @@ type Room struct {
 	GameLoop *game.GameLoop
 	Joining  chan *Client
 	Leaving  chan *Client
-	Clients  map[*Client]bool
+	Clients  map[uint32]*Client
 }
 
 type Message struct {
@@ -27,7 +27,7 @@ func NewRoom(gameLoop *game.GameLoop) *Room {
 		GameLoop: gameLoop,
 		Joining:  make(chan *Client),
 		Leaving:  make(chan *Client),
-		Clients:  make(map[*Client]bool),
+		Clients:  make(map[uint32]*Client),
 	}
 }
 
@@ -35,9 +35,10 @@ func (room *Room) Start() {
 	for {
 		select {
 		case client := <-room.Joining:
-			room.Clients[client] = true
+			room.Clients[client.ID] = client
 			atomic.AddUint32(&room.GameLoop.PlayerCount, 1)
 			fmt.Println("Joining, Users in room: ", room.GameLoop.PlayerCount)
+
 			select {
 			case room.GameLoop.Actions <- &communication.Action{ID: client.ID, Move: "join"}:
 			default:
@@ -46,18 +47,24 @@ func (room *Room) Start() {
 			break
 		case client := <-room.Leaving:
 			atomic.AddUint32(&room.GameLoop.PlayerCount, ^uint32(0))
-			delete(room.Clients, client)
+			delete(room.Clients, client.ID)
 			fmt.Println("Leaving, Users in room: ", room.GameLoop.PlayerCount)
 			room.GameLoop.Actions <- &communication.Action{ID: client.ID, Move: "leave"}
 			break
 		case message := <-room.GameLoop.Broadcast:
-			for client, _ := range room.Clients {
+			for _, client := range room.Clients {
 				if err := client.Conn.WriteMessage(websocket.BinaryMessage, message); err != nil {
-					fmt.Println(err)
-					return
+					log.Println(err)
 				}
 			}
+		case update := <-room.GameLoop.Updates:
+			if err := room.Clients[update.ID].Conn.
+				WriteMessage(websocket.BinaryMessage, update.Data); err != nil {
+				log.Println(err)
+				return
+			}
 		}
+
 	}
 
 }
