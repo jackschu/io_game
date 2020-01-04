@@ -13,7 +13,9 @@ let ball;
 let depthIndicator;
 let playerSize;
 let lastSendTimestamp;
-
+let yourServerId;
+let yourWall;
+let playerWalls = {};
 let app = new PIXI.Application({
     antialias: true,
     transparent: false,
@@ -26,38 +28,57 @@ document.body.appendChild(app.view);
 window.addEventListener('resize', resize);
 
 socket.onmessage = event => {
-    let pbState = updates.GameState.deserializeBinary(event.data);
+    let pbMessage = updates.AnyMessage.deserializeBinary(event.data);
+    switch (pbMessage.getDataCase()) {
+        case updates.AnyMessage.DataCase.STATE:
+            let pbState = pbMessage.getState();
+            let pbObject = pbState.toObject();
+            let timestamp = pbObject.timestamp;
+            let rawPlayerData = pbObject.playersMap;
 
-    let pbObject = pbState.toObject();
-    let timestamp = pbObject.timestamp;
-    let rawPlayerData = pbObject.playersMap;
+            let incomingPlayers = new Set();
 
-    let incomingPlayers = new Set();
+            for (const [keyI, data] of rawPlayerData) {
+                let key = String(keyI);
+                incomingPlayers.add(key);
+                if (players[key] === undefined) {
+                    players[key] = new Player(key, playerSize);
+                    app.stage.addChild(players[key].pixiObj);
+                }
+                addState(data, timestamp, players[key]);
+            }
 
-    for (const [keyI, data] of rawPlayerData) {
-        let key = String(keyI);
-        incomingPlayers.add(key);
-        if (players[key] === undefined) {
-            players[key] = new Player(key, playerSize);
-            app.stage.addChild(players[key].pixiObj);
-        }
-        addState(data, timestamp, players[key]);
+            for (const key in players) {
+                if (!incomingPlayers.has(key)) {
+                    players[key].destroy();
+                    delete playerWalls[key];
+                    delete players[key];
+                }
+            }
+
+            let ballData = pbObject.ball;
+            if (ball === undefined) {
+                console.log('new ball', pbObject.ball);
+                ball = new Ball(ballData.zpos);
+                app.stage.addChild(ball.pixiObj);
+            }
+            addState(ballData, timestamp, ball);
+            break;
+        case updates.AnyMessage.DataCase.START:
+            let pbStartMessage = pbMessage.getStart();
+            yourServerId = pbStartMessage.getYourid();
+            yourWall = pbStartMessage.getWall();
+            break;
+        case updates.AnyMessage.DataCase.JOIN:
+            let pbJoinMessage = pbMessage.getJoin();
+            let wallsArray = pbJoinMessage.toObject().playerwallsMap;
+            for (const [id, wall] of wallsArray) {
+                playerWalls[String(id)] = wall;
+            }
+            break;
+        default:
+            console.log('got invalid message', pbMessage);
     }
-
-    for (const key in players) {
-        if (!incomingPlayers.has(key)) {
-            players[key].destroy();
-            delete players[key];
-        }
-    }
-
-    let ballData = pbObject.ball;
-    if (ball === undefined) {
-        console.log('new ball', pbObject.ball);
-        ball = new Ball(ballData.zpos);
-        app.stage.addChild(ball.pixiObj);
-    }
-    addState(ballData, timestamp, ball);
 };
 
 function moveHandler(e) {
@@ -98,11 +119,11 @@ function gameLoop(delta) {
     }
 
     for (const key of Object.keys(players)) {
-        players[key].update(playerSize);
+        players[key].update(playerSize, yourWall, playerWalls[key]);
     }
 
     if (ball) {
-        ball.update();
+        ball.update(yourWall);
         depthIndicator.update(ball.zPos);
     }
 }
