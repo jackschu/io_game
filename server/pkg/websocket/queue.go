@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"github.com/jackschu/io_game/pkg/game"
+	"sync"
 	"time"
 )
 
@@ -10,6 +11,7 @@ type Queue struct {
 	clientSet map[*Client]bool
 	roomSize  int
 	PlayerIDs chan uint32
+	mux       *sync.Mutex
 }
 
 func NewQueue(roomSize int) *Queue {
@@ -18,10 +20,13 @@ func NewQueue(roomSize int) *Queue {
 		clientSet: make(map[*Client]bool),
 		roomSize:  roomSize,
 		PlayerIDs: make(chan uint32, 3),
+		mux:       &sync.Mutex{},
 	}
 }
 
 func (queue *Queue) AddClient(client *Client) {
+	queue.mux.Lock()
+	defer queue.mux.Unlock()
 	if queue.clientSet[client] {
 		return
 	}
@@ -30,6 +35,8 @@ func (queue *Queue) AddClient(client *Client) {
 }
 
 func (queue *Queue) RemoveClient(client *Client) {
+	queue.mux.Lock()
+	defer queue.mux.Unlock()
 	if !queue.clientSet[client] {
 		return
 	}
@@ -54,6 +61,7 @@ func (queue *Queue) Delegate() {
 	for {
 		select {
 		case <-ticker.C:
+			queue.mux.Lock()
 			if len(queue.clients) >= queue.roomSize {
 				game := game.NewGameLoop()
 				room := NewRoom(game)
@@ -68,6 +76,7 @@ func (queue *Queue) Delegate() {
 
 				go game.Start()
 			}
+			queue.mux.Unlock()
 		}
 	}
 }
