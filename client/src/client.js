@@ -7,7 +7,7 @@ import { Player } from './player';
 import { Ball } from './ball';
 import Constants from '../../Constants';
 import updates from './updates_pb';
-var jspb = require('google-protobuf');
+
 let players = {};
 let ball;
 let depthIndicator;
