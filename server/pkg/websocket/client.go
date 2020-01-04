@@ -16,7 +16,12 @@ type Client struct {
 
 func (c *Client) Read() {
 	defer func() {
-		c.Room.Leaving <- c
+		if c.Room != nil {
+			c.Room.Leaving <- c
+		} else {
+			c.Queue.RemoveClient(c)
+		}
+
 		c.Conn.Close()
 	}()
 

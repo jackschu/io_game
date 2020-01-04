@@ -72,6 +72,7 @@ func (queue *Queue) Delegate() {
 					curClient.Room = room
 					room.Joining <- curClient
 					queue.clients = queue.clients[1:]
+					delete(queue.clientSet, curClient)
 				}
 
 				go game.Start()
