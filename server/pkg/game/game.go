@@ -7,7 +7,6 @@ import (
 	pb "github.com/jackschu/io_game/pkg/proto"
 	"github.com/jackschu/io_game/pkg/websocket"
 	"log"
-	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -32,7 +31,6 @@ type GameLoop struct {
 	InfoMap        map[uint32]*pb.Player
 	PlayerMetadata map[uint32]*PlayerMetadata
 	Ball           *pb.Ball
-	MetaMux        sync.Mutex
 }
 
 func NewGameLoop(room *websocket.Room) *GameLoop {
@@ -202,14 +200,12 @@ func (g *GameLoop) registerMove(action *communication.Action) {
 	move := action.Move
 	if move == "join" {
 		g.InfoMap[action.ID] = NewPlayerInfo()
-		g.MetaMux.Lock()
 		wall := g.getOpenWall()
 		g.PlayerMetadata[action.ID] = &PlayerMetadata{WallNum: wall}
 		wall_map := make(map[uint32]pb.Wall)
 		for id, metadata := range g.PlayerMetadata {
 			wall_map[id] = pb.Wall(metadata.WallNum)
 		}
-		g.MetaMux.Unlock()
 
 		data, err := proto.Marshal(&pb.AnyMessage{Data: &pb.AnyMessage_Start{Start: &pb.GameStart{YourID: action.ID, Wall: pb.Wall(wall)}}})
 		if err != nil {
