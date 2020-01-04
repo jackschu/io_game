@@ -58,7 +58,7 @@ socket.onmessage = event => {
 
             let ballData = pbObject.ball;
             if (ball === undefined) {
-                console.log(pbObject.ball);
+                console.log('new ball', pbObject.ball);
                 ball = new Ball(ballData.zpos);
                 app.stage.addChild(ball.pixiObj);
             }

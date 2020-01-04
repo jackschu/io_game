@@ -61,8 +61,7 @@ func (room *Room) Start() {
 		case message := <-room.Broadcast:
 			for _, client := range room.Clients {
 				if err := client.Conn.WriteMessage(websocket.BinaryMessage, message); err != nil {
-					fmt.Println(err)
-					return
+					log.Println(err)
 				}
 			}
 		case update := <-room.Updates:

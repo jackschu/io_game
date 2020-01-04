@@ -37,6 +37,8 @@ func setupRoutes() {
 }
 
 func main() {
+	// Enable line numbers in logging
+    log.SetFlags(log.LstdFlags | log.Lshortfile)
 	setupRoutes()
 	log.Fatal(http.ListenAndServe(":8000", nil))
 }
