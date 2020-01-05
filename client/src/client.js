@@ -13,9 +13,11 @@ let ball;
 let depthIndicator;
 let playerSize;
 let lastSendTimestamp;
+let gameStarted = false;
 let yourServerId;
 let yourWall;
 let playerWalls = {};
+
 let app = new PIXI.Application({
     antialias: true,
     transparent: false,
@@ -28,6 +30,12 @@ document.body.appendChild(app.view);
 window.addEventListener('resize', resize);
 
 socket.onmessage = event => {
+    if (!gameStarted) {
+        gameStarted = true;
+        resize();
+        setup();
+    }
+
     let pbMessage = updates.AnyMessage.deserializeBinary(event.data);
     switch (pbMessage.getDataCase()) {
         case updates.AnyMessage.DataCase.STATE:
@@ -158,8 +166,6 @@ function resize() {
     // it handles resolution
 }
 
-resize();
-setup();
 if (module.hot) {
     module.hot.accept('./socket_io.js', function() {
         console.log('socket_io.js hot-reloaded');

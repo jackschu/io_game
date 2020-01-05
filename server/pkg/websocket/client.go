@@ -8,14 +8,20 @@ import (
 )
 
 type Client struct {
-	ID   uint32
-	Conn *websocket.Conn
-	Room *Room
+	ID    uint32
+	Conn  *websocket.Conn
+	Room  *Room
+	Queue *Queue
 }
 
 func (c *Client) Read() {
 	defer func() {
-		c.Room.Leaving <- c
+		if c.Room != nil {
+			c.Room.Leaving <- c
+		} else {
+			c.Queue.RemoveClient(c)
+		}
+
 		c.Conn.Close()
 	}()
 
@@ -25,11 +31,16 @@ func (c *Client) Read() {
 			log.Println(err)
 			return
 		}
+
+		if c.Room == nil {
+			continue
+		}
+
 		select {
-		case c.Room.Actions <- &communication.Action{ID: c.ID, Move: string(p)}:
+		case c.Room.GameLoop.Actions <- &communication.Action{ID: c.ID, Move: string(p)}:
 		default:
 			log.Println("channel full, num players:",
-				atomic.LoadUint32(&c.Room.PlayerCount))
+				atomic.LoadUint32(&c.Room.GameLoop.PlayerCount))
 		}
 	}
 }

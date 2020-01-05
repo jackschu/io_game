@@ -5,7 +5,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/jackschu/io_game/pkg/communication"
 	pb "github.com/jackschu/io_game/pkg/proto"
-	"github.com/jackschu/io_game/pkg/websocket"
 	"log"
 	"sync/atomic"
 	"time"
@@ -27,18 +26,24 @@ func NewBallInfo() *pb.Ball {
 }
 
 type GameLoop struct {
-	Room           *websocket.Room
+	Actions        chan *communication.Action
+	Updates        chan *communication.SingleMessage
+	PlayerCount    uint32
+	Broadcast      chan []byte
 	InfoMap        map[uint32]*pb.Player
-	PlayerMetadata map[uint32]*PlayerMetadata
 	Ball           *pb.Ball
+	PlayerMetadata map[uint32]*PlayerMetadata
 }
 
-func NewGameLoop(room *websocket.Room) *GameLoop {
+func NewGameLoop() *GameLoop {
 	return &GameLoop{
-		Room:           room,
+		Broadcast:      make(chan []byte),
+		Actions:        make(chan *communication.Action, 8),
+		Updates:        make(chan *communication.SingleMessage, 2),
+		PlayerCount:    0,
 		InfoMap:        make(map[uint32]*pb.Player),
-		PlayerMetadata: make(map[uint32]*PlayerMetadata),
 		Ball:           NewBallInfo(),
+		PlayerMetadata: make(map[uint32]*PlayerMetadata),
 	}
 }
 
@@ -161,11 +166,10 @@ func (g *GameLoop) Start() {
 				log.Fatal("marshaling error: ", err)
 			}
 
-			g.Room.Broadcast <- data
-
-			for i := 0; i < int(atomic.LoadUint32(&g.Room.PlayerCount))+2; i++ {
+			g.Broadcast <- data
+			for i := 0; i < int(atomic.LoadUint32(&g.PlayerCount))+2; i++ {
 				select {
-				case action := <-g.Room.Actions:
+				case action := <-g.Actions:
 					g.registerMove(action)
 				default:
 					break
@@ -212,12 +216,12 @@ func (g *GameLoop) registerMove(action *communication.Action) {
 			log.Fatal("join marshaling error: ", err)
 		}
 
-		g.Room.Updates <- &communication.SingleMessage{ID: action.ID, Data: data}
+		g.Updates <- &communication.SingleMessage{ID: action.ID, Data: data}
 		data, err = proto.Marshal(&pb.AnyMessage{Data: &pb.AnyMessage_Join{Join: &pb.PlayerJoin{PlayerWalls: wall_map}}})
 		if err != nil {
 			log.Fatal("join broadcast marshaling error: ", err)
 		}
-		g.Room.Broadcast <- data
+		g.Broadcast <- data
 		return
 	}
 	if move == "leave" {
