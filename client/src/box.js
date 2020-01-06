@@ -1,4 +1,3 @@
-import * as PIXI from 'pixi.js-legacy';
 import { pointProject } from './utils';
 import Constants from '../../Constants';
 

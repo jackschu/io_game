@@ -1,4 +1,3 @@
-import * as PIXI from 'pixi.js-legacy';
 import { socket } from './socket_io';
 import { addState } from './states';
 import { clip } from './utils';
