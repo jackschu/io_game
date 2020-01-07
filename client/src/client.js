@@ -97,12 +97,12 @@ function moveHandler(e) {
         return;
     }
     lastSendTimestamp = now;
+    let message = new updates.Player();
     const pos = e.data.getLocalPosition(app.stage);
-    const outObj = {
-        XPos: clip(pos.x, 0, Constants.WIDTH),
-        YPos: clip(pos.y, 0, Constants.HEIGHT),
-    };
-    const out = JSON.stringify(outObj);
+    message.setXpos(clip(pos.x, 0, Constants.WIDTH));
+    message.setYpos(clip(pos.y, 0, Constants.HEIGHT));
+
+    const out = message.serializeBinary();
     socket.send(out);
 }
 

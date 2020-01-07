@@ -1,7 +1,6 @@
 package game
 
 import (
-	"encoding/json"
 	"github.com/golang/protobuf/proto"
 	"github.com/jackschu/io_game/pkg/communication"
 	pb "github.com/jackschu/io_game/pkg/proto"
@@ -229,18 +228,15 @@ func (g *GameLoop) registerMove(action *communication.Action) {
 		delete(g.PlayerMetadata, action.ID)
 		return
 	}
-
-	if json.Valid([]byte(move)) {
+	if move == "move" {
 		curPlayer := g.InfoMap[action.ID]
 		Xlast := curPlayer.Xpos
 		Ylast := curPlayer.Ypos
-		json.Unmarshal([]byte(move), curPlayer)
+		proto.UnmarshalMerge(action.Data, curPlayer)
 		curPlayer.Xlast = Xlast
 		curPlayer.Ylast = Ylast
-
 	} else {
-		log.Println("got invalid JSON " + move)
-
+		log.Println("got invalid Move ", move)
 	}
 
 }
