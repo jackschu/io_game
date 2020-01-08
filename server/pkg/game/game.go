@@ -15,8 +15,8 @@ func NewBallInfo() *pb.Ball {
 		Xpos: 750,
 		Ypos: 500,
 		Zpos: 0,
-		Xvel: 0.7,
-		Yvel: 0.7,
+		Xvel: 0.0,
+		Yvel: 0.0,
 		Zvel: 0.7,
 		Xang: 0,
 		Yang: 0,
@@ -88,10 +88,12 @@ func applySpin(ball *pb.Ball) {
 
 // reset velocities, including angular velocity
 func resetVel(ball *pb.Ball) {
+	ball.Xpos = 750
+	ball.Ypos = 500
 	ball.Xang = 0
 	ball.Yang = 0
-	ball.Xvel = 0.7
-	ball.Yvel = 0.7
+	ball.Xvel = 0.0
+	ball.Yvel = 0.0
 	ball.Zvel = 0.7
 }
 
@@ -122,8 +124,8 @@ func (g *GameLoop) Start() {
 						continue
 					}
 					if playerBallCollide(player, g.Ball) {
-						g.Ball.Xang = player.Ylast - player.Ypos
-						g.Ball.Yang = player.Xlast - player.Xpos
+						g.Ball.Xang += player.Ylast - player.Ypos
+						g.Ball.Yang += player.Xlast - player.Xpos
 						bounce = true
 						break
 					}
