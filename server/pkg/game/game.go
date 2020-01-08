@@ -168,15 +168,16 @@ func (g *GameLoop) Start() {
 			g.Ball.Xpos += float32(dt) * g.Ball.Xvel
 			g.Ball.Ypos += float32(dt) * g.Ball.Yvel
 			g.Ball.Zpos += float32(dt) * g.Ball.Zvel
+
+			for _, bot := range g.Bots {
+				bot.Act()
+			}
+
 			data, err := proto.Marshal(&pb.AnyMessage{Data: &pb.AnyMessage_State{State: &pb.GameState{Ball: g.Ball, Players: g.InfoMap,
 				Timestamp: uint64(time.Now().UnixNano() / 1000000)}}})
 
 			if err != nil {
 				log.Fatal("marshaling error: ", err)
-			}
-
-			for _, bot := range g.Bots {
-				bot.Act()
 			}
 
 			g.Broadcast <- data
