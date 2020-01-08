@@ -29,6 +29,7 @@ type GameLoop struct {
 	Actions        chan *communication.Action
 	Updates        chan *communication.SingleMessage
 	PlayerCount    uint32
+	Bots           []*Bot
 	Broadcast      chan []byte
 	InfoMap        map[uint32]*pb.Player
 	Ball           *pb.Ball
@@ -41,9 +42,17 @@ func NewGameLoop() *GameLoop {
 		Actions:        make(chan *communication.Action, 8),
 		Updates:        make(chan *communication.SingleMessage, 2),
 		PlayerCount:    0,
+		Bots:           nil,
 		InfoMap:        make(map[uint32]*pb.Player),
 		Ball:           NewBallInfo(),
 		PlayerMetadata: make(map[uint32]*PlayerMetadata),
+	}
+}
+
+func (g *GameLoop) InitBots(bots []*Bot) {
+	g.Bots = bots
+	for _, bot := range bots {
+		g.addPlayer(bot.ID)
 	}
 }
 
@@ -166,6 +175,10 @@ func (g *GameLoop) Start() {
 				log.Fatal("marshaling error: ", err)
 			}
 
+			for _, bot := range g.Bots {
+				bot.Act()
+			}
+
 			g.Broadcast <- data
 			for i := 0; i < int(atomic.LoadUint32(&g.PlayerCount))+2; i++ {
 				select {
@@ -200,28 +213,34 @@ func (g *GameLoop) getOpenWall() int {
 	}
 }
 
+func (g *GameLoop) addPlayer(id uint32) int {
+	g.InfoMap[id] = NewPlayerInfo()
+	wall := g.getOpenWall()
+	g.PlayerMetadata[id] = &PlayerMetadata{WallNum: wall}
+	wall_map := make(map[uint32]pb.Wall)
+	for id, metadata := range g.PlayerMetadata {
+		wall_map[id] = pb.Wall(metadata.WallNum)
+	}
+
+	data, err := proto.Marshal(&pb.AnyMessage{Data: &pb.AnyMessage_Join{Join: &pb.PlayerJoin{PlayerWalls: wall_map}}})
+	if err != nil {
+		log.Fatal("join broadcast marshaling error: ", err)
+	}
+
+	g.Broadcast <- data
+	return wall
+}
+
 func (g *GameLoop) registerMove(action *communication.Action) {
 	move := action.Move
 	if move == "join" {
-		g.InfoMap[action.ID] = NewPlayerInfo()
-		wall := g.getOpenWall()
-		g.PlayerMetadata[action.ID] = &PlayerMetadata{WallNum: wall}
-		wall_map := make(map[uint32]pb.Wall)
-		for id, metadata := range g.PlayerMetadata {
-			wall_map[id] = pb.Wall(metadata.WallNum)
-		}
-
+		wall := g.addPlayer(action.ID)
 		data, err := proto.Marshal(&pb.AnyMessage{Data: &pb.AnyMessage_Start{Start: &pb.GameStart{YourID: action.ID, Wall: pb.Wall(wall)}}})
 		if err != nil {
 			log.Fatal("join marshaling error: ", err)
 		}
 
 		g.Updates <- &communication.SingleMessage{ID: action.ID, Data: data}
-		data, err = proto.Marshal(&pb.AnyMessage{Data: &pb.AnyMessage_Join{Join: &pb.PlayerJoin{PlayerWalls: wall_map}}})
-		if err != nil {
-			log.Fatal("join broadcast marshaling error: ", err)
-		}
-		g.Broadcast <- data
 		return
 	}
 	if move == "leave" {
