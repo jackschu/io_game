@@ -87,7 +87,7 @@ func applySpin(ball *pb.Ball) {
 }
 
 // reset velocities and positions, including angular velocity
-func (ball *pb.Ball) reset() {
+func resetBall (ball *pb.Ball) {
 	ball.Xpos = 750
 	ball.Ypos = 500
 	ball.Xang = 0
@@ -133,7 +133,7 @@ func (g *GameLoop) Start() {
 				if bounce {
 					g.Ball.Zvel *= -1
 				} else {
-					g.Ball.reset()
+					resetBall(g.Ball)
 					if ball_back {
 						g.Ball.Zpos = 0
 					} else if ball_front {
