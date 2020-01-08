@@ -49,11 +49,9 @@ func NewGameLoop() *GameLoop {
 	}
 }
 
-func (g *GameLoop) InitBots(bots []*Bot) {
-	g.Bots = bots
-	for _, bot := range bots {
-		g.addPlayer(bot.ID)
-	}
+func (g *GameLoop) AddBot(bot *Bot) {
+	g.Bots = append(g.Bots, bot)
+	g.addPlayer(bot.ID)
 }
 
 func max(x, y float32) float32 {

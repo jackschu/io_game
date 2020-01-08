@@ -64,15 +64,13 @@ func (queue *Queue) RemoveClient(client *Client) {
 
 func (queue *Queue) Delegate() {
 	gameLoop := game.NewGameLoop()
+	room := NewRoom(gameLoop)
+	go room.Start()
 
 	bots := make([]*game.Bot, queue.numBots)
 	for i, _ := range bots {
-		bots[i] = &game.Bot{ID: <-queue.PlayerIDs, Game: gameLoop}
+		bots[i] = game.NewBot(<-queue.PlayerIDs, gameLoop)
 	}
-
-	room := NewRoom(gameLoop)
-	go room.Start()
-	gameLoop.InitBots(bots)
 
 	for i := 0; i < queue.roomSize; i++ {
 		curClient := queue.clients[0]
