@@ -99,6 +99,7 @@ func resetVel(ball *pb.Ball) {
 func (g *GameLoop) Start() {
 	prev := time.Now()
 	ticker := time.NewTicker(16 * time.Millisecond)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
