@@ -1,7 +1,6 @@
 package game
 
 import (
-	"encoding/json"
 	"github.com/golang/protobuf/proto"
 	"github.com/jackschu/io_game/pkg/communication"
 	pb "github.com/jackschu/io_game/pkg/proto"
@@ -16,8 +15,8 @@ func NewBallInfo() *pb.Ball {
 		Xpos: 750,
 		Ypos: 500,
 		Zpos: 0,
-		Xvel: 0.7,
-		Yvel: 0.7,
+		Xvel: 0.0,
+		Yvel: 0.0,
 		Zvel: 0.7,
 		Xang: 0,
 		Yang: 0,
@@ -94,12 +93,14 @@ func applySpin(ball *pb.Ball) {
 	ball.Zvel += (ball.Yang*ball.Xvel - ball.Xang*ball.Yvel) * multiple * zMultiple
 }
 
-// reset velocities, including angular velocity
-func resetVel(ball *pb.Ball) {
+// reset velocities and positions, including angular velocity
+func resetBall (ball *pb.Ball) {
+	ball.Xpos = 750
+	ball.Ypos = 500
 	ball.Xang = 0
 	ball.Yang = 0
-	ball.Xvel = 0.7
-	ball.Yvel = 0.7
+	ball.Xvel = 0.0
+	ball.Yvel = 0.0
 	ball.Zvel = 0.7
 }
 
@@ -130,8 +131,8 @@ func (g *GameLoop) Start() {
 						continue
 					}
 					if playerBallCollide(player, g.Ball) {
-						g.Ball.Xang = player.Ylast - player.Ypos
-						g.Ball.Yang = player.Xlast - player.Xpos
+						g.Ball.Xang += player.Ylast - player.Ypos
+						g.Ball.Yang += player.Xlast - player.Xpos
 						bounce = true
 						break
 					}
@@ -139,7 +140,7 @@ func (g *GameLoop) Start() {
 				if bounce {
 					g.Ball.Zvel *= -1
 				} else {
-					resetVel(g.Ball)
+					resetBall(g.Ball)
 					if ball_back {
 						g.Ball.Zpos = 0
 					} else if ball_front {
@@ -247,18 +248,15 @@ func (g *GameLoop) registerMove(action *communication.Action) {
 		delete(g.PlayerMetadata, action.ID)
 		return
 	}
-
-	if json.Valid([]byte(move)) {
+	if move == "move" {
 		curPlayer := g.InfoMap[action.ID]
 		Xlast := curPlayer.Xpos
 		Ylast := curPlayer.Ypos
-		json.Unmarshal([]byte(move), curPlayer)
+		proto.UnmarshalMerge(action.Data, curPlayer)
 		curPlayer.Xlast = Xlast
 		curPlayer.Ylast = Ylast
-
 	} else {
-		log.Println("got invalid JSON " + move)
-
+		log.Println("got invalid Move ", move)
 	}
 
 }
