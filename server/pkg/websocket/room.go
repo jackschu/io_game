@@ -32,6 +32,7 @@ func NewRoom(gameLoop *game.GameLoop) *Room {
 }
 
 func (room *Room) Start() {
+	defer close(room.GameLoop.Actions)
 	for {
 		select {
 		case client := <-room.Joining:
@@ -47,6 +48,10 @@ func (room *Room) Start() {
 			break
 		case client := <-room.Leaving:
 			atomic.AddUint32(&room.GameLoop.PlayerCount, ^uint32(0))
+			players := atomic.LoadUint32(&room.GameLoop.PlayerCount)
+			if players == 0 {
+				return
+			}
 			delete(room.Clients, client.ID)
 			fmt.Println("Leaving, Users in room: ", room.GameLoop.PlayerCount)
 			room.GameLoop.Actions <- &communication.Action{ID: client.ID, Move: "leave"}
