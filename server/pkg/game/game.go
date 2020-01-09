@@ -37,7 +37,7 @@ type GameLoop struct {
 
 func NewGameLoop() *GameLoop {
 	return &GameLoop{
-		Broadcast:      make(chan []byte),
+		Broadcast:      make(chan []byte, 8),
 		Actions:        make(chan *communication.Action, 8),
 		Updates:        make(chan *communication.SingleMessage, 2),
 		PlayerCount:    0,
@@ -107,13 +107,13 @@ func resetBall (ball *pb.Ball) {
 func (g *GameLoop) Start() {
 	prev := time.Now()
 	ticker := time.NewTicker(16 * time.Millisecond)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
 			cur := time.Now()
 			dt := cur.Sub(prev).Seconds() * 1000.0
 			prev = cur
-
 			// TODO replace hardd coded walls withshared consts
 			ball_radius := float32(50)
 			ball_back := g.Ball.Zpos > 800 && 800+2*ball_radius > g.Ball.Zpos &&
@@ -178,11 +178,17 @@ func (g *GameLoop) Start() {
 			if err != nil {
 				log.Fatal("marshaling error: ", err)
 			}
-
-			g.Broadcast <- data
+			select {
+			case g.Broadcast <- data:
+			default:
+				log.Println("full broadcast")
+			}
 			for i := 0; i < int(atomic.LoadUint32(&g.PlayerCount))+2; i++ {
 				select {
-				case action := <-g.Actions:
+				case action, more := <-g.Actions:
+					if !more {
+						return
+					}
 					g.registerMove(action)
 				default:
 					break
