@@ -10,6 +10,7 @@ import (
 	"runtime/pprof"
 	"time"
 )
+
 // to profile, go build main.go then ./main -cpuprofile=<anyfilename>
 // wait 50 seconds (adjustable) then kill program
 // go run tool pprof <anyfilename>
@@ -57,9 +58,8 @@ func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	setupRoutes()
 	log.Fatal(http.ListenAndServe(":8000", nil))
-	return
-
 }
+
 func stopProfile() {
 	ticker := time.NewTicker(1 * time.Second)
 	for i := 0; i < 50; i++ {
