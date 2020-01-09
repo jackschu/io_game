@@ -58,10 +58,15 @@ func (room *Room) Start() {
 				}
 			}
 		case update := <-room.GameLoop.Updates:
-			if err := room.Clients[update.ID].Conn.
+			client, present := room.Clients[update.ID]
+			if !present {
+				log.Println("Update to ", update.ID, " failed, missing client")
+				break
+			}
+			if err := client.Conn.
 				WriteMessage(websocket.BinaryMessage, update.Data); err != nil {
 				log.Println(err)
-				return
+				break
 			}
 		}
 
