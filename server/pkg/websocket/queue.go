@@ -9,15 +9,17 @@ type Queue struct {
 	clients   []*Client
 	clientSet map[*Client]bool
 	roomSize  int
+	numBots   int
 	PlayerIDs chan uint32
 	mux       *sync.Mutex
 }
 
-func NewQueue(roomSize int) *Queue {
+func NewQueue(roomSize, numBots int) *Queue {
 	newQueue := &Queue{
 		clients:   make([]*Client, 0),
 		clientSet: make(map[*Client]bool),
 		roomSize:  roomSize,
+		numBots:   numBots,
 		PlayerIDs: make(chan uint32, 3),
 		mux:       &sync.Mutex{},
 	}
@@ -61,9 +63,14 @@ func (queue *Queue) RemoveClient(client *Client) {
 }
 
 func (queue *Queue) Delegate() {
-	game := game.NewGameLoop()
-	room := NewRoom(game)
+	gameLoop := game.NewGameLoop()
+	room := NewRoom(gameLoop)
 	go room.Start()
+
+	bots := make([]*game.Bot, queue.numBots)
+	for i, _ := range bots {
+		bots[i] = game.NewBot(<-queue.PlayerIDs, gameLoop)
+	}
 
 	for i := 0; i < queue.roomSize; i++ {
 		curClient := queue.clients[0]
@@ -73,7 +80,7 @@ func (queue *Queue) Delegate() {
 		delete(queue.clientSet, curClient)
 	}
 
-	go game.Start()
+	go gameLoop.Start()
 }
 
 func (queue *Queue) idCounter() {
