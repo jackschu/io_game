@@ -36,6 +36,7 @@ func (room *Room) Start() {
 		select {
 		case client := <-room.Joining:
 			room.Clients[client.ID] = client
+			client.SetRoom(room)
 			atomic.AddUint32(&room.GameLoop.PlayerCount, 1)
 			fmt.Println("Joining, Users in room: ", room.GameLoop.PlayerCount)
 
