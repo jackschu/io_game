@@ -48,10 +48,6 @@ func (queue *Queue) RemoveClient(client *Client) {
 
 	delete(queue.clientSet, client)
 
-	if client.Room != nil {
-		client.Room.Leaving <- client
-		return
-	}
 	for i, c := range queue.clients {
 		if client == c {
 			queue.clients = append(queue.clients[:i], queue.clients[i+1:]...)
