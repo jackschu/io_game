@@ -1,0 +1,16 @@
+# edge case for leave and join at same time (-race trigger)
+config:
+  target: "ws://localhost:8000/ws"
+  phases:
+    - duration: 5
+      arrivalRate: 1
+  ws:
+    # Ignore SSL certificate errors
+    # - useful in *development* with self-signed certs
+    rejectUnauthorized: false
+scenarios:
+  - engine: "ws"
+    flow:
+      - send: "hello"
+      - think: 1
+      - send: "world"

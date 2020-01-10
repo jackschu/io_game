@@ -20,7 +20,7 @@
             "eslint --fix --ignore-path ../.gitignore",
             "git add"
         ],
-        "../**/*.{json,html}": [
+        "../**/*.{json,html,yml,yaml}": [
             "prettier --write",
             "git add"
         ]
