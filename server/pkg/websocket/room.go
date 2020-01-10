@@ -30,8 +30,11 @@ func NewRoom(gameLoop *game.GameLoop) *Room {
 	}
 }
 
+func (room *Room) SendMove(client *Client, data []byte) {
+	go room.GameLoop.UpdateAction(client.ID, data)
+}
+
 func (room *Room) Start() {
-	defer close(room.GameLoop.Actions)
 	for {
 		select {
 		case client := <-room.Joining:

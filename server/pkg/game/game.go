@@ -26,7 +26,7 @@ func NewBallInfo() *pb.Ball {
 }
 
 type GameLoop struct {
-	Actions        chan *communication.Action
+	Actions        map[uint32]*communication.Action
 	Updates        chan *communication.SingleMessage
 	PlayerCount    uint32
 	Bots           []*Bot
@@ -35,12 +35,13 @@ type GameLoop struct {
 	Ball           *pb.Ball
 	PlayerMetadata map[uint32]*PlayerMetadata
 	ClientsMutex   sync.Mutex
+	ActionsMutex   sync.Mutex
 }
 
 func NewGameLoop() *GameLoop {
 	return &GameLoop{
 		Broadcast:      make(chan []byte, 8),
-		Actions:        make(chan *communication.Action, 8),
+		Actions:        make(map[uint32]*communication.Action),
 		Updates:        make(chan *communication.SingleMessage, 2),
 		PlayerCount:    0,
 		Bots:           nil,
@@ -96,7 +97,7 @@ func applySpin(ball *pb.Ball) {
 }
 
 // reset velocities and positions, including angular velocity
-func resetBall (ball *pb.Ball) {
+func resetBall(ball *pb.Ball) {
 	ball.Xpos = 750
 	ball.Ypos = 500
 	ball.Xang = 0
@@ -111,6 +112,9 @@ func (g *GameLoop) Start() {
 	ticker := time.NewTicker(16 * time.Millisecond)
 	defer ticker.Stop()
 	for {
+		if atomic.LoadUint32(&g.PlayerCount) == 0 {
+			return
+		}
 		g.ClientsMutex.Lock()
 		select {
 		case <-ticker.C:
@@ -186,17 +190,18 @@ func (g *GameLoop) Start() {
 			default:
 				log.Println("full broadcast")
 			}
-			for i := 0; i < int(atomic.LoadUint32(&g.PlayerCount))+2; i++ {
-				select {
-				case action, more := <-g.Actions:
-					if !more {
-						return
-					}
-					g.registerMove(action)
-				default:
-					break
-				}
+
+			g.ActionsMutex.Lock()
+			for id, action := range g.Actions {
+				curPlayer := g.InfoMap[id]
+				Xlast := curPlayer.Xpos
+				Ylast := curPlayer.Ypos
+				proto.UnmarshalMerge(action.Data, curPlayer)
+				curPlayer.Xlast = Xlast
+				curPlayer.Ylast = Ylast
 			}
+			g.Actions = make(map[uint32]*communication.Action)
+			g.ActionsMutex.Unlock()
 		}
 		g.ClientsMutex.Unlock()
 
@@ -243,17 +248,6 @@ func (g *GameLoop) addPlayer(id uint32) int {
 	return wall
 }
 
-func (g *GameLoop) registerMove(action *communication.Action) {
-	move := action.Move
-	if move == "move" {
-		curPlayer := g.InfoMap[action.ID]
-		Xlast := curPlayer.Xpos
-		Ylast := curPlayer.Ypos
-		proto.UnmarshalMerge(action.Data, curPlayer)
-		curPlayer.Xlast = Xlast
-		curPlayer.Ylast = Ylast
-	} else {
-		log.Println("got invalid Move ", move)
 func (g *GameLoop) ClientJoin(id uint32) {
 	wall := g.addPlayer(id)
 	data, err := proto.Marshal(&pb.AnyMessage{Data: &pb.AnyMessage_Start{Start: &pb.GameStart{YourID: id, Wall: pb.Wall(wall)}}})
@@ -270,4 +264,9 @@ func (g *GameLoop) ClientLeave(id uint32) {
 	delete(g.PlayerMetadata, id)
 	g.ClientsMutex.Unlock()
 }
+
+func (g *GameLoop) UpdateAction(id uint32, data []byte) {
+	g.ActionsMutex.Lock()
+	g.Actions[id] = &communication.Action{ID: id, Move: "move", Data: data}
+	g.ActionsMutex.Unlock()
 }
