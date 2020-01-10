@@ -5,6 +5,7 @@ import (
 	"github.com/jackschu/io_game/pkg/communication"
 	pb "github.com/jackschu/io_game/pkg/proto"
 	"log"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -33,6 +34,7 @@ type GameLoop struct {
 	InfoMap        map[uint32]*pb.Player
 	Ball           *pb.Ball
 	PlayerMetadata map[uint32]*PlayerMetadata
+	ClientsMutex   sync.Mutex
 }
 
 func NewGameLoop() *GameLoop {
@@ -109,6 +111,7 @@ func (g *GameLoop) Start() {
 	ticker := time.NewTicker(16 * time.Millisecond)
 	defer ticker.Stop()
 	for {
+		g.ClientsMutex.Lock()
 		select {
 		case <-ticker.C:
 			cur := time.Now()
@@ -195,6 +198,7 @@ func (g *GameLoop) Start() {
 				}
 			}
 		}
+		g.ClientsMutex.Unlock()
 
 	}
 
@@ -220,6 +224,7 @@ func (g *GameLoop) getOpenWall() int {
 }
 
 func (g *GameLoop) addPlayer(id uint32) int {
+	g.ClientsMutex.Lock()
 	g.InfoMap[id] = NewPlayerInfo()
 	wall := g.getOpenWall()
 	g.PlayerMetadata[id] = &PlayerMetadata{WallNum: wall}
@@ -227,6 +232,7 @@ func (g *GameLoop) addPlayer(id uint32) int {
 	for id, metadata := range g.PlayerMetadata {
 		wall_map[id] = pb.Wall(metadata.WallNum)
 	}
+	g.ClientsMutex.Unlock()
 
 	data, err := proto.Marshal(&pb.AnyMessage{Data: &pb.AnyMessage_Join{Join: &pb.PlayerJoin{PlayerWalls: wall_map}}})
 	if err != nil {
@@ -239,21 +245,6 @@ func (g *GameLoop) addPlayer(id uint32) int {
 
 func (g *GameLoop) registerMove(action *communication.Action) {
 	move := action.Move
-	if move == "join" {
-		wall := g.addPlayer(action.ID)
-		data, err := proto.Marshal(&pb.AnyMessage{Data: &pb.AnyMessage_Start{Start: &pb.GameStart{YourID: action.ID, Wall: pb.Wall(wall)}}})
-		if err != nil {
-			log.Fatal("join marshaling error: ", err)
-		}
-
-		g.Updates <- &communication.SingleMessage{ID: action.ID, Data: data}
-		return
-	}
-	if move == "leave" {
-		delete(g.InfoMap, action.ID)
-		delete(g.PlayerMetadata, action.ID)
-		return
-	}
 	if move == "move" {
 		curPlayer := g.InfoMap[action.ID]
 		Xlast := curPlayer.Xpos
@@ -263,6 +254,20 @@ func (g *GameLoop) registerMove(action *communication.Action) {
 		curPlayer.Ylast = Ylast
 	} else {
 		log.Println("got invalid Move ", move)
+func (g *GameLoop) ClientJoin(id uint32) {
+	wall := g.addPlayer(id)
+	data, err := proto.Marshal(&pb.AnyMessage{Data: &pb.AnyMessage_Start{Start: &pb.GameStart{YourID: id, Wall: pb.Wall(wall)}}})
+	if err != nil {
+		log.Fatal("join marshaling error: ", err)
 	}
 
+	g.Updates <- &communication.SingleMessage{ID: id, Data: data}
+}
+
+func (g *GameLoop) ClientLeave(id uint32) {
+	g.ClientsMutex.Lock()
+	delete(g.InfoMap, id)
+	delete(g.PlayerMetadata, id)
+	g.ClientsMutex.Unlock()
+}
 }
