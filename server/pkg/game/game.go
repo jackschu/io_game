@@ -193,7 +193,10 @@ func (g *GameLoop) Start() {
 
 			g.ActionsMutex.Lock()
 			for id, action := range g.Actions {
-				curPlayer := g.InfoMap[id]
+				curPlayer, ok := g.InfoMap[id]
+				if !ok {
+					continue
+				}
 				Xlast := curPlayer.Xpos
 				Ylast := curPlayer.Ypos
 				proto.UnmarshalMerge(action.Data, curPlayer)
