@@ -115,9 +115,9 @@ func (g *GameLoop) Start() {
 		if atomic.LoadUint32(&g.PlayerCount) == 0 {
 			return
 		}
-		g.ClientsMutex.Lock()
 		select {
 		case <-ticker.C:
+			g.ClientsMutex.Lock()
 			cur := time.Now()
 			dt := cur.Sub(prev).Seconds() * 1000.0
 			prev = cur
@@ -202,8 +202,9 @@ func (g *GameLoop) Start() {
 			}
 			g.Actions = make(map[uint32]*communication.Action)
 			g.ActionsMutex.Unlock()
+
+			g.ClientsMutex.Unlock()
 		}
-		g.ClientsMutex.Unlock()
 
 	}
 
