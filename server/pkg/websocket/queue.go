@@ -50,10 +50,6 @@ func (queue *Queue) RemoveClient(client *Client) {
 
 	delete(queue.clientSet, client)
 
-	if client.Room != nil {
-		client.Room.Leaving <- client
-		return
-	}
 	for i, c := range queue.clients {
 		if client == c {
 			queue.clients = append(queue.clients[:i], queue.clients[i+1:]...)
@@ -74,7 +70,6 @@ func (queue *Queue) Delegate() {
 
 	for i := 0; i < queue.roomSize; i++ {
 		curClient := queue.clients[0]
-		curClient.Room = room
 		room.Joining <- curClient
 		queue.clients = queue.clients[1:]
 		delete(queue.clientSet, curClient)

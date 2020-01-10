@@ -3,6 +3,8 @@ package websocket
 import (
 	"github.com/gorilla/websocket"
 	"log"
+	"sync"
+	"sync/atomic"
 )
 
 type Client struct {
@@ -10,11 +12,25 @@ type Client struct {
 	Conn  *websocket.Conn
 	Room  *Room
 	Queue *Queue
+	Mutex sync.Mutex
+}
+
+func (c *Client) SetRoom(room *Room) {
+	c.Mutex.Lock()
+	c.Room = room
+	c.Mutex.Unlock()
+}
+
+func (c *Client) HasRoom() bool {
+	c.Mutex.Lock()
+	hasRoom := c.Room != nil
+	c.Mutex.Unlock()
+	return hasRoom
 }
 
 func (c *Client) Read() {
 	defer func() {
-		if c.Room != nil {
+		if c.HasRoom() {
 			c.Room.Leaving <- c
 		} else {
 			c.Queue.RemoveClient(c)
@@ -30,7 +46,7 @@ func (c *Client) Read() {
 			return
 		}
 
-		if c.Room == nil {
+		if !c.HasRoom() {
 			continue
 		}
 
