@@ -1,0 +1,14 @@
+# meant to be run multiple times and check cpu usage
+config:
+  target: "ws://localhost:8000/ws"
+  phases:
+    - duration: 3
+      arrivalRate: 40
+  ws:
+    # Ignore SSL certificate errors
+    # - useful in *development* with self-signed certs
+    rejectUnauthorized: false
+scenarios:
+  - engine: "ws"
+    flow:
+      - think: 2
