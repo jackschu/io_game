@@ -1,0 +1,20 @@
+# ramp to 500 users
+config:
+  target: "ws://localhost:8000/ws"
+  processor: "./mock_random_input.js"
+  phases:
+    - duration: 50
+      arrivalRate: 10
+  ws:
+    # Ignore SSL certificate errors
+    # - useful in *development* with self-signed certs
+    rejectUnauthorized: false
+    binaryType: "arraybuffer"
+scenarios:
+  - engine: ws
+    flow:
+      - loop:
+          - loop:
+              - think: 0.016
+            count: 60
+        count: 50
