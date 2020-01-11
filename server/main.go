@@ -4,6 +4,7 @@ import (
 	"github.com/jackschu/io_game/pkg/websocket"
 	"github.com/jackschu/io_game/pkg/metrics"
 	"log"
+	"sync/atomic"
 	"net/http"
 )
 
@@ -14,7 +15,7 @@ func serveWs(queue *websocket.Queue, w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 	// helpful log statement to show connections
-	log.Println("Client Connected")
+	log.Println("Client Connected", atomic.LoadUint32(&metrics.WebsocketsOpen), "online")
 	id := <-queue.PlayerIDs
 	client := &websocket.Client{
 		ID:    id,

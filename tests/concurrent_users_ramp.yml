@@ -3,8 +3,8 @@ config:
   target: "ws://localhost:8000/ws"
   processor: "./mock_random_input.js"
   phases:
-    - duration: 2
-      arrivalRate: 2
+    - duration: 50
+      arrivalRate: 10
   ws:
     # Ignore SSL certificate errors
     # - useful in *development* with self-signed certs
@@ -19,4 +19,4 @@ scenarios:
               - function: "createRandomMouse"
               - send: "{{ data }}"
             count: 60
-        count: 10
+        count: 50

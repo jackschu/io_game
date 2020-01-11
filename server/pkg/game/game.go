@@ -111,7 +111,7 @@ func resetBall(ball *pb.Ball) {
 
 func (g *GameLoop) Start() {
 	prev := time.Now()
-	ticker := time.NewTicker(16 * time.Millisecond)
+	ticker := time.NewTicker(33 * time.Millisecond)
 	defer ticker.Stop()
 	for {
 		if atomic.LoadUint32(&g.PlayerCount) == 0 {
