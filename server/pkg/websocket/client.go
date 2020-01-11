@@ -2,11 +2,9 @@ package websocket
 
 import (
 	"github.com/gorilla/websocket"
-	"github.com/jackschu/io_game/pkg/communication"
 	"github.com/jackschu/io_game/pkg/metrics"
 	"log"
 	"sync"
-	"sync/atomic"
 )
 
 type Client struct {
@@ -54,11 +52,6 @@ func (c *Client) Read() {
 			continue
 		}
 
-		select {
-		case c.Room.GameLoop.Actions <- &communication.Action{ID: c.ID, Move: "move", Data: p}:
-		default:
-			log.Println("channel full, num players:",
-				atomic.LoadUint32(&c.Room.GameLoop.PlayerCount))
-		}
+		c.Room.SendMove(c, p)
 	}
 }
