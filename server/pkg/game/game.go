@@ -255,7 +255,10 @@ func (g *GameLoop) registerMove(action *communication.Action) {
 		return
 	}
 	if move == "move" {
-		curPlayer := g.InfoMap[action.ID]
+		curPlayer, pres := g.InfoMap[action.ID]
+		if !pres {
+			return
+		}
 		Xlast := curPlayer.Xpos
 		Ylast := curPlayer.Ypos
 		proto.UnmarshalMerge(action.Data, curPlayer)

@@ -1,14 +1,22 @@
 # ramp to 500 users
 config:
   target: "ws://localhost:8000/ws"
+  processor: "./mock_random_input.js"
   phases:
-    - duration: 50
-      arrivalRate: 10
+    - duration: 2
+      arrivalRate: 2
   ws:
     # Ignore SSL certificate errors
     # - useful in *development* with self-signed certs
     rejectUnauthorized: false
+    binaryType: "arraybuffer"
 scenarios:
-  - engine: "ws"
+  - engine: ws
     flow:
-      - think: 50
+      - loop:
+          - loop:
+              - think: 0.016
+              - function: "createRandomMouse"
+              - send: "{{ data }}"
+            count: 60
+        count: 10
