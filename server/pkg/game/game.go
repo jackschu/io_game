@@ -267,6 +267,10 @@ func (g *GameLoop) ClientLeave(id uint32) {
 	delete(g.InfoMap, id)
 	delete(g.PlayerMetadata, id)
 	g.ClientsMutex.Unlock()
+
+	g.ActionsMutex.Lock()
+	delete(g.Actions, id)
+	g.ActionsMutex.Unlock()
 }
 
 func (g *GameLoop) UpdateAction(id uint32, data []byte) {
