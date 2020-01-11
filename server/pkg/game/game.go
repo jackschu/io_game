@@ -1,12 +1,12 @@
 package game
 
 import (
+	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/jackschu/io_game/pkg/communication"
 	"github.com/jackschu/io_game/pkg/metrics"
 	pb "github.com/jackschu/io_game/pkg/proto"
 	"log"
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -123,7 +123,7 @@ func (g *GameLoop) Start() {
 			cur := time.Now()
 			dt := cur.Sub(prev).Seconds() * 1000.0
 			if dt > 40 {
-				fmt.Println("skipped frame on server ",atomic.LoadUint32(&metrics.WebsocketsOpen))
+				fmt.Println("skipped frame on server ", atomic.LoadUint32(&metrics.WebsocketsOpen))
 			}
 			prev = cur
 			// TODO replace hardd coded walls withshared consts
@@ -256,7 +256,6 @@ func (g *GameLoop) addPlayer(id uint32) int {
 	g.Broadcast <- data
 	return wall
 }
-
 
 func (g *GameLoop) ClientJoin(id uint32) {
 	wall := g.addPlayer(id)

@@ -5,6 +5,7 @@ import (
 	"github.com/jackschu/io_game/pkg/metrics"
 	"log"
 	"sync"
+	"sync/atomic"
 )
 
 type Client struct {
