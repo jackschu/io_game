@@ -1,12 +1,12 @@
 package game
 
 import (
+	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/jackschu/io_game/pkg/communication"
 	"github.com/jackschu/io_game/pkg/metrics"
 	pb "github.com/jackschu/io_game/pkg/proto"
 	"log"
-	"fmt"
 	"sync/atomic"
 	"time"
 )
@@ -96,7 +96,7 @@ func applySpin(ball *pb.Ball) {
 }
 
 // reset velocities and positions, including angular velocity
-func resetBall (ball *pb.Ball) {
+func resetBall(ball *pb.Ball) {
 	ball.Xpos = 750
 	ball.Ypos = 500
 	ball.Xang = 0
@@ -108,7 +108,7 @@ func resetBall (ball *pb.Ball) {
 
 func (g *GameLoop) Start() {
 	prev := time.Now()
-	ticker := time.NewTicker(16 * time.Millisecond)
+	ticker := time.NewTicker(33 * time.Millisecond)
 	defer ticker.Stop()
 	for {
 		select {
@@ -116,7 +116,7 @@ func (g *GameLoop) Start() {
 			cur := time.Now()
 			dt := cur.Sub(prev).Seconds() * 1000.0
 			if dt > 40 {
-				fmt.Println("skipped frame on server ",atomic.LoadUint32(&metrics.WebsocketsOpen))
+				fmt.Println("skipped frame on server ", atomic.LoadUint32(&metrics.WebsocketsOpen))
 			}
 			prev = cur
 			// TODO replace hardd coded walls withshared consts
