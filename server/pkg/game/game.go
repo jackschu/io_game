@@ -3,8 +3,10 @@ package game
 import (
 	"github.com/golang/protobuf/proto"
 	"github.com/jackschu/io_game/pkg/communication"
+	"github.com/jackschu/io_game/pkg/metrics"
 	pb "github.com/jackschu/io_game/pkg/proto"
 	"log"
+	"fmt"
 	"sync/atomic"
 	"time"
 )
@@ -113,6 +115,9 @@ func (g *GameLoop) Start() {
 		case <-ticker.C:
 			cur := time.Now()
 			dt := cur.Sub(prev).Seconds() * 1000.0
+			if dt > 40 {
+				fmt.Println("skipped frame on server ",atomic.LoadUint32(&metrics.WebsocketsOpen))
+			}
 			prev = cur
 			// TODO replace hardd coded walls withshared consts
 			ball_radius := float32(50)

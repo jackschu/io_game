@@ -3,6 +3,7 @@ package websocket
 import (
 	"github.com/gorilla/websocket"
 	"github.com/jackschu/io_game/pkg/communication"
+	"github.com/jackschu/io_game/pkg/metrics"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -30,12 +31,14 @@ func (c *Client) HasRoom() bool {
 }
 
 func (c *Client) Read() {
+	atomic.AddUint32(&metrics.WebsocketsOpen, 1)
 	defer func() {
 		if c.HasRoom() {
 			c.Room.Leaving <- c
 		} else {
 			c.Queue.RemoveClient(c)
 		}
+		atomic.AddUint32(&metrics.WebsocketsOpen, ^uint32(0))
 
 		c.Conn.Close()
 	}()

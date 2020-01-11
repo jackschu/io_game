@@ -2,13 +2,14 @@ package main
 
 import (
 	"github.com/jackschu/io_game/pkg/websocket"
+	"github.com/jackschu/io_game/pkg/metrics"
 	"log"
 	"net/http"
 )
 
 func serveWs(queue *websocket.Queue, w http.ResponseWriter, r *http.Request) {
 	conn, err := websocket.Upgrade(w, r)
-
+	
 	if err != nil {
 		log.Println(err)
 	}
@@ -34,6 +35,7 @@ func setupRoutes() {
 }
 
 func main() {
+	metrics.WebsocketsOpen = 0
 	// Enable line numbers in logging
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	setupRoutes()
