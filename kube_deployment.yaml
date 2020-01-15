@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: game-deployment
+  labels:
+    app: gameserver
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: gameserver
+  template:
+    metadata:
+      labels:
+        app: gameserver
+    spec:
+      containers:
+        - name: private-reg-container
+          image: docker.io/jackschu/curveball:latest
+          ports:
+            - containerPort: 8000
+      imagePullSecrets:
+        - name: pullsecret

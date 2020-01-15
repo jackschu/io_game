@@ -1,6 +1,6 @@
 let host = window.location.hostname;
-if (host == 'localhost') {
-    host = host + ':8000';
+if (window.location.port) {
+    host = host + ':' + window.location.port;
 }
 
 let socket = new WebSocket('ws://' + host + '/ws');
