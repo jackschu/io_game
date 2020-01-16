@@ -41,8 +41,10 @@ export class Player {
             );
         }
 
-        this.pixiObj.clear();
-        this.pixiObj.beginFill(0xff0000, 0.3).drawRect(0, 0, size, size);
+        /* this.pixiObj.clear();
+         * this.pixiObj.beginFill(0xff0000, 0.3).drawRect(0, 0, size, size); */
+        let ratio = size / Constants.VIRTUAL_PLAYER_SIZE;
+        this.pixiObj.scale.x = this.pixiObj.scale.y = ratio;
         this.pixiObj.x = curState.xpos - size / 2;
         this.pixiObj.y = curState.ypos - size / 2;
         this.nameText.position.set(size / 2, size / 2);
