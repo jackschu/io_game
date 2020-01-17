@@ -22,7 +22,7 @@ function emptyBoxCoordinates(depth) {
 function emptyBox(depth, color = NEON, width = 2) {
     let box = new PIXI.Graphics();
     // width of lines scale with depth
-    box.lineStyle((width * 500) / (depth + 500), color, 1);
+    box.lineStyle(1 + (width * 500) / (depth + 500), color, 1);
     box.beginFill(0, 0);
     const [x0, y0, x1, y1] = emptyBoxCoordinates(depth);
     box.drawRect(x0, y0, x1 - x0, y1 - y0);
