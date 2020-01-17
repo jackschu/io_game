@@ -30,7 +30,6 @@ document.body.appendChild(app.view);
 window.addEventListener('resize', resize);
 
 socket.onmessage = event => {
-    return;
     if (!gameStarted) {
         gameStarted = true;
         resize();
@@ -38,7 +37,6 @@ socket.onmessage = event => {
     }
     let pbMessage = AnyMessage.decode(new Uint8Array(event.data));
     switch (pbMessage.data) {
-        //case updates.AnyMessage.DataCase.STATE:
         case 'state':
             let pbState = pbMessage.state;
             let pbObject = pbState;
@@ -74,12 +72,12 @@ socket.onmessage = event => {
             }
             addState(ballData, timestamp, ball);
             break;
-        case 'start': // updates.AnyMessage.DataCase.START:
+        case 'start':
             let pbStartMessage = pbMessage.start;
             yourServerId = pbStartMessage.YourID;
             yourWall = pbStartMessage.wall;
             break;
-        case 'join': //updates.AnyMessage.DataCase.JOIN:
+        case 'join':
             let pbJoinMessage = pbMessage.join;
             let wallsArray = pbJoinMessage.playerWalls;
             for (const id in wallsArray) {
@@ -98,7 +96,6 @@ function moveHandler(e) {
         lastSendTimestamp &&
         now - lastSendTimestamp < 1000 / Constants.SEND_FPS
     ) {
-        return;
     }
     lastSendTimestamp = now;
 
@@ -118,8 +115,8 @@ function setup() {
     let root = protobuf.Root.fromJSON(jsonDescriptor);
     AnyMessage = root.lookupType('AnyMessage');
     playerUpdate = root.lookupType('Player');
-    //app.stage.interactive = true;
-    //app.stage.on('pointermove', moveHandler);
+    app.stage.interactive = true;
+    app.stage.on('pointermove', moveHandler);
 
     app.stage.addChild(debugCorners());
     app.stage.addChild(boxesTunnel());
