@@ -33,10 +33,10 @@ function emptyBox(depth, color = NEON, width = 2) {
 // DEBUG corners for debugging
 export function debugCorners() {
     let corners = new PIXI.Graphics();
-    
+
     let corner = new PIXI.Graphics().beginFill(0xff0000).drawRect(0, 0, 10, 10);
     corners.addChild(corner);
-    
+
     let corner2 = new PIXI.Graphics()
         .beginFill(0xff0000)
         .drawRect(Constants.WIDTH - 10, Constants.HEIGHT - 10, 10, 10);
@@ -46,14 +46,14 @@ export function debugCorners() {
 
 export function boxesTunnel() {
     let obj = new PIXI.Graphics();
-    
+
     // add green frames
     const num_boxes = 9;
     for (let i = 0; i < num_boxes; i++) {
         const box = emptyBox(i * 100);
         obj.addChild(box);
     }
-    
+
     let backBoxDepth = (num_boxes - 1) * 100;
 
     // add lines connecting frames
@@ -74,7 +74,10 @@ export function boxesTunnel() {
         );
         obj.addChild(line);
     }
-    
+    console.log(obj.cacheAsBitmap);
+    obj.cacheAsBitmap = true;
+    console.log(obj.cacheAsBitmap);
+
     return obj;
 }
 

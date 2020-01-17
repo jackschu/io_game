@@ -23,6 +23,7 @@ let app = new PIXI.Application({
     transparent: false,
     autoDensity: true,
     resolution: window.devicePixelRatio,
+    forceCanvas: false,
     resizeTo: window,
 });
 
@@ -51,6 +52,7 @@ socket.onmessage = event => {
 
                 if (players[key] === undefined) {
                     players[key] = new Player(key, playerSize);
+                    players[key].pixiObj = toSprite(players[key].pixiObj);
                     app.stage.addChild(players[key].pixiObj);
                 }
                 addState(data, timestamp, players[key]);
@@ -66,8 +68,9 @@ socket.onmessage = event => {
 
             let ballData = pbObject.ball;
             if (ball === undefined) {
-                console.log('new ball', pbObject.ball);
                 ball = new Ball(ballData.zpos);
+                ball.pixiObj = toSprite(ball.pixiObj);
+                console.log('new ball', pbObject.ball.pixiObj);
                 app.stage.addChild(ball.pixiObj);
             }
             addState(ballData, timestamp, ball);
@@ -109,6 +112,10 @@ function moveHandler(e) {
     socket.send(out);
 }
 
+function toSprite(graphics) {
+    return new PIXI.Sprite(app.renderer.generateTexture(graphics));
+}
+
 function setup() {
     let jsonDescriptor = require('./updates.json');
 
@@ -118,10 +125,11 @@ function setup() {
     app.stage.interactive = true;
     app.stage.on('pointermove', moveHandler);
 
-    app.stage.addChild(debugCorners());
-    app.stage.addChild(boxesTunnel());
+    app.stage.addChild(toSprite(debugCorners()));
+    app.stage.addChild(toSprite(boxesTunnel()));
 
     depthIndicator = new DepthIndicator();
+    depthIndicator.pixiObj = toSprite(depthIndicator.pixiObj);
     app.stage.addChild(depthIndicator.pixiObj);
 
     app.ticker.add(delta => gameLoop(delta));
