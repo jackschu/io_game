@@ -5,7 +5,6 @@ import { DepthIndicator, boxesTunnel, debugCorners } from './box';
 import { Player } from './player';
 import { Ball } from './ball';
 import Constants from '../../Constants';
-import updates from './updates_pb';
 
 let players = {};
 let ball;
@@ -16,6 +15,8 @@ let gameStarted = false;
 let yourServerId;
 let yourWall;
 let playerWalls = {};
+let AnyMessage;
+let playerUpdate;
 
 let app = new PIXI.Application({
     antialias: true,
@@ -29,25 +30,27 @@ document.body.appendChild(app.view);
 window.addEventListener('resize', resize);
 
 socket.onmessage = event => {
+    return;
     if (!gameStarted) {
         gameStarted = true;
         resize();
         setup();
     }
-
-    let pbMessage = updates.AnyMessage.deserializeBinary(event.data);
-    switch (pbMessage.getDataCase()) {
-        case updates.AnyMessage.DataCase.STATE:
-            let pbState = pbMessage.getState();
-            let pbObject = pbState.toObject();
+    let pbMessage = AnyMessage.decode(new Uint8Array(event.data));
+    switch (pbMessage.data) {
+        //case updates.AnyMessage.DataCase.STATE:
+        case 'state':
+            let pbState = pbMessage.state;
+            let pbObject = pbState;
             let timestamp = pbObject.timestamp;
-            let rawPlayerData = pbObject.playersMap;
+            let rawPlayerData = pbObject.players;
 
             let incomingPlayers = new Set();
-
-            for (const [keyI, data] of rawPlayerData) {
+            for (const keyI in rawPlayerData) {
+                let data = rawPlayerData[keyI];
                 let key = String(keyI);
                 incomingPlayers.add(key);
+
                 if (players[key] === undefined) {
                     players[key] = new Player(key, playerSize);
                     app.stage.addChild(players[key].pixiObj);
@@ -71,15 +74,16 @@ socket.onmessage = event => {
             }
             addState(ballData, timestamp, ball);
             break;
-        case updates.AnyMessage.DataCase.START:
-            let pbStartMessage = pbMessage.getStart();
-            yourServerId = pbStartMessage.getYourid();
-            yourWall = pbStartMessage.getWall();
+        case 'start': // updates.AnyMessage.DataCase.START:
+            let pbStartMessage = pbMessage.start;
+            yourServerId = pbStartMessage.YourID;
+            yourWall = pbStartMessage.wall;
             break;
-        case updates.AnyMessage.DataCase.JOIN:
-            let pbJoinMessage = pbMessage.getJoin();
-            let wallsArray = pbJoinMessage.toObject().playerwallsMap;
-            for (const [id, wall] of wallsArray) {
+        case 'join': //updates.AnyMessage.DataCase.JOIN:
+            let pbJoinMessage = pbMessage.join;
+            let wallsArray = pbJoinMessage.playerWalls;
+            for (const id in wallsArray) {
+                let wall = wallsArray[id];
                 playerWalls[String(id)] = wall;
             }
             break;
@@ -89,7 +93,7 @@ socket.onmessage = event => {
 };
 
 function moveHandler(e) {
-    let now = new Date().getTime();
+    let now = Date.now();
     if (
         lastSendTimestamp &&
         now - lastSendTimestamp < 1000 / Constants.SEND_FPS
@@ -97,18 +101,25 @@ function moveHandler(e) {
         return;
     }
     lastSendTimestamp = now;
-    let message = new updates.Player();
-    const pos = e.data.getLocalPosition(app.stage);
-    message.setXpos(clip(pos.x, 0, Constants.WIDTH));
-    message.setYpos(clip(pos.y, 0, Constants.HEIGHT));
 
-    const out = message.serializeBinary();
+    const pos = e.data.getLocalPosition(app.stage);
+    let message = playerUpdate.create({
+        Xpos: clip(pos.x, 0, Constants.WIDTH),
+        Ypos: clip(pos.y, 0, Constants.HEIGHT),
+    });
+
+    const out = playerUpdate.encode(message).finish();
     socket.send(out);
 }
 
 function setup() {
-    app.stage.interactive = true;
-    app.stage.on('pointermove', moveHandler);
+    let jsonDescriptor = require('./updates.json');
+
+    let root = protobuf.Root.fromJSON(jsonDescriptor);
+    AnyMessage = root.lookupType('AnyMessage');
+    playerUpdate = root.lookupType('Player');
+    //app.stage.interactive = true;
+    //app.stage.on('pointermove', moveHandler);
 
     app.stage.addChild(debugCorners());
     app.stage.addChild(boxesTunnel());

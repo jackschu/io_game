@@ -8,7 +8,7 @@
         "build": "webpack --mode production",
         "dev": "webpack --mode development",
         "start": "yarn dev && webpack-dev-server --open",
-        "proto": "protoc updates.proto --proto_path=../proto --go_out=../server/pkg/proto --js_out=import_style=commonjs,binary:../client/src"
+        "proto": "protoc ../proto/updates.proto --proto_path=../proto --go_out=../server/pkg/proto --js_out=import_style=commonjs,binary:../client/src && npx protobufjs -t json ../proto/updates.proto -o ./src/updates.json"
     },
     "husky": {
         "hooks": {
