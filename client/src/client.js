@@ -7,6 +7,7 @@ import { Ball } from './ball';
 import Constants from '../../Constants';
 
 let players = {};
+let canvas;
 let ball;
 let depthIndicator;
 let playerSize;
@@ -93,6 +94,20 @@ socket.onmessage = event => {
     }
 };
 
+function throttleRAF() {
+    let queuedCallback;
+    return callback => {
+        if (!queuedCallback) {
+            requestAnimationFrame(() => {
+                const cb = queuedCallback;
+                queuedCallback = null;
+                cb();
+            });
+        }
+        queuedCallback = callback;
+    };
+}
+
 function moveHandler(e) {
     let now = Date.now();
     if (
@@ -101,11 +116,15 @@ function moveHandler(e) {
     ) {
     }
     lastSendTimestamp = now;
-
-    const pos = e.data.getLocalPosition(app.stage);
+    let ratio = Math.min(
+        window.innerWidth / Constants.WIDTH,
+        window.innerHeight / Constants.HEIGHT
+    );
+    let x = e.clientX / ratio;
+    let y = e.clientY / ratio;
     let message = playerUpdate.create({
-        Xpos: clip(pos.x, 0, Constants.WIDTH),
-        Ypos: clip(pos.y, 0, Constants.HEIGHT),
+        Xpos: clip(x, 0, Constants.WIDTH),
+        Ypos: clip(y, 0, Constants.HEIGHT),
     });
 
     const out = playerUpdate.encode(message).finish();
@@ -117,13 +136,21 @@ function toSprite(graphics) {
 }
 
 function setup() {
+    canvas = document.getElementsByTagName('canvas')[0];
+    app.renderer.plugins.interaction.destroy();
     let jsonDescriptor = require('./updates.json');
 
     let root = protobuf.Root.fromJSON(jsonDescriptor);
     AnyMessage = root.lookupType('AnyMessage');
     playerUpdate = root.lookupType('Player');
     app.stage.interactive = true;
-    app.stage.on('pointermove', moveHandler);
+    let throttle = throttleRAF();
+
+    canvas.addEventListener('pointermove', e => {
+        throttle(() => {
+            moveHandler(e);
+        });
+    });
 
     app.stage.addChild(toSprite(debugCorners()));
     app.stage.addChild(toSprite(boxesTunnel()));
