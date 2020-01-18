@@ -4,7 +4,7 @@ let states = new WeakMap();
 let serverClientGap;
 
 function clientTime() {
-    return new Date().getTime() + serverClientGap;
+    return Date.now() + serverClientGap;
 }
 
 function getBaseState(obj) {
@@ -33,7 +33,7 @@ export function addState(rawState, timestamp, obj) {
         states.set(obj, []);
     }
 
-    serverClientGap = timestamp - new Date().getTime();
+    serverClientGap = timestamp - Date.now();
 
     let state = {
         timestamp: timestamp,
@@ -47,11 +47,11 @@ export function addState(rawState, timestamp, obj) {
     }
 }
 
-export function generateCurrentState(obj) {    
+export function generateCurrentState(obj) {
     if (!states.has(obj)) {
         states.set(obj, []);
     }
-    
+
     let curTime = clientTime();
     let stateArr = states.get(obj);
     let i = getBaseState(obj);

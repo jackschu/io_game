@@ -89,7 +89,7 @@ socket.onmessage = event => {
 };
 
 function moveHandler(e) {
-    let now = new Date().getTime();
+    let now = Date.now();
     if (
         lastSendTimestamp &&
         now - lastSendTimestamp < 1000 / Constants.SEND_FPS
