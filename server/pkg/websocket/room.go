@@ -42,15 +42,16 @@ func (room *Room) Start() {
 			client.SetRoom(room)
 			atomic.AddUint32(&room.GameLoop.PlayerCount, 1)
 			fmt.Println("Joining, Users in room: ", room.GameLoop.PlayerCount)
-			room.GameLoop.ClientJoin(client.ID)
+			go room.GameLoop.ClientJoin(client.ID)
 		case client := <-room.Leaving:
 			atomic.AddUint32(&room.GameLoop.PlayerCount, ^uint32(0))
 			players := atomic.LoadUint32(&room.GameLoop.PlayerCount)
+			fmt.Println("Leaving, Users in room: ", room.GameLoop.PlayerCount)
 			if players == 0 {
 				return
 			}
 			delete(room.Clients, client.ID)
-			fmt.Println("Leaving, Users in room: ", room.GameLoop.PlayerCount)
+
 			room.GameLoop.ClientLeave(client.ID)
 		case message := <-room.GameLoop.Broadcast:
 			for _, client := range room.Clients {
@@ -70,7 +71,6 @@ func (room *Room) Start() {
 				break
 			}
 		}
-
 	}
 
 }

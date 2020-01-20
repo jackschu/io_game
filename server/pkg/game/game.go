@@ -188,7 +188,7 @@ func (g *GameLoop) Start() {
 			select {
 			case g.Broadcast <- data:
 			default:
-				log.Println("full broadcast")
+				log.Println("full broadcast", atomic.LoadUint32(&g.PlayerCount))
 			}
 
 			g.ActionsMutex.Lock()
