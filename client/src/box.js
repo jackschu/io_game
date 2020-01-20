@@ -74,10 +74,6 @@ export function boxesTunnel() {
         );
         obj.addChild(line);
     }
-    console.log(obj.cacheAsBitmap);
-    obj.cacheAsBitmap = true;
-    console.log(obj.cacheAsBitmap);
-
     return obj;
 }
 
