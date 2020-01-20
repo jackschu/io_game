@@ -3,7 +3,6 @@ package websocket
 import (
 	"fmt"
 	"github.com/gorilla/websocket"
-	"github.com/jackschu/io_game/pkg/communication"
 	"github.com/jackschu/io_game/pkg/game"
 	pb "github.com/jackschu/io_game/pkg/proto"
 	"log"
@@ -31,8 +30,11 @@ func NewRoom(gameLoop *game.GameLoop) *Room {
 	}
 }
 
+func (room *Room) SendMove(client *Client, data []byte) {
+	go room.GameLoop.UpdateAction(client.ID, data)
+}
+
 func (room *Room) Start() {
-	defer close(room.GameLoop.Actions)
 	for {
 		select {
 		case client := <-room.Joining:
@@ -40,23 +42,17 @@ func (room *Room) Start() {
 			client.SetRoom(room)
 			atomic.AddUint32(&room.GameLoop.PlayerCount, 1)
 			fmt.Println("Joining, Users in room: ", room.GameLoop.PlayerCount)
-
-			select {
-			case room.GameLoop.Actions <- &communication.Action{ID: client.ID, Move: "join"}:
-			default:
-				log.Println("full join")
-			}
-			break
+			go room.GameLoop.ClientJoin(client.ID)
 		case client := <-room.Leaving:
 			atomic.AddUint32(&room.GameLoop.PlayerCount, ^uint32(0))
 			players := atomic.LoadUint32(&room.GameLoop.PlayerCount)
+			fmt.Println("Leaving, Users in room: ", room.GameLoop.PlayerCount)
 			if players == 0 {
 				return
 			}
 			delete(room.Clients, client.ID)
-			fmt.Println("Leaving, Users in room: ", room.GameLoop.PlayerCount)
-			room.GameLoop.Actions <- &communication.Action{ID: client.ID, Move: "leave"}
-			break
+
+			room.GameLoop.ClientLeave(client.ID)
 		case message := <-room.GameLoop.Broadcast:
 			for _, client := range room.Clients {
 				if err := client.Conn.WriteMessage(websocket.BinaryMessage, message); err != nil {
@@ -75,7 +71,6 @@ func (room *Room) Start() {
 				break
 			}
 		}
-
 	}
 
 }
