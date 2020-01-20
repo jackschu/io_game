@@ -34,7 +34,6 @@ export function addState(rawState, timestamp, obj) {
     }
 
     serverClientGap = timestamp - Date.now();
-
     let state = {
         timestamp: timestamp,
         data: rawState,

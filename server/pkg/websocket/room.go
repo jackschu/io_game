@@ -2,6 +2,8 @@ package websocket
 
 import (
 	"fmt"
+	"time"
+	"math/rand"
 	"github.com/gorilla/websocket"
 	"github.com/jackschu/io_game/pkg/game"
 	pb "github.com/jackschu/io_game/pkg/proto"
@@ -54,11 +56,17 @@ func (room *Room) Start() {
 
 			room.GameLoop.ClientLeave(client.ID)
 		case message := <-room.GameLoop.Broadcast:
+			//@nocommit
+			if rand.Int()%6 > 4 {
+				time.Sleep(time.Duration(100+(rand.Int()%90))*time.Millisecond)
+			}
+
 			for _, client := range room.Clients {
 				if err := client.Conn.WriteMessage(websocket.BinaryMessage, message); err != nil {
 					log.Println(err)
 				}
 			}
+			
 		case update := <-room.GameLoop.Updates:
 			client, present := room.Clients[update.ID]
 			if !present {

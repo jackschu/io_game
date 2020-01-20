@@ -40,7 +40,7 @@ type GameLoop struct {
 
 func NewGameLoop() *GameLoop {
 	return &GameLoop{
-		Broadcast:      make(chan []byte, 8),
+		Broadcast:      make(chan []byte, 30), // @nocommit, make 8
 		Actions:        make(map[uint32]*communication.Action),
 		Updates:        make(chan *communication.SingleMessage, 2),
 		PlayerCount:    0,
@@ -109,7 +109,7 @@ func resetBall(ball *pb.Ball) {
 
 func (g *GameLoop) Start() {
 	prev := time.Now()
-	ticker := time.NewTicker(16*2 * time.Millisecond)
+	ticker := time.NewTicker(16 * 2 * time.Millisecond)
 	defer ticker.Stop()
 	for {
 		if atomic.LoadUint32(&g.PlayerCount) == 0 {
@@ -186,7 +186,9 @@ func (g *GameLoop) Start() {
 				log.Fatal("marshaling error: ", err)
 			}
 			select {
+
 			case g.Broadcast <- data:
+
 			default:
 				log.Println("full broadcast", atomic.LoadUint32(&g.PlayerCount))
 			}

@@ -4,6 +4,7 @@ import (
 	"github.com/gorilla/websocket"
 	"log"
 	"sync"
+	"time"
 )
 
 type Client struct {
@@ -48,7 +49,10 @@ func (c *Client) Read() {
 		if !c.HasRoom() {
 			continue
 		}
-
-		c.Room.SendMove(c, p)
+		//@nocommit
+		go func() {
+			time.Sleep(50 * time.Millisecond)
+			c.Room.SendMove(c, p)
+		}()
 	}
 }
