@@ -99,6 +99,7 @@ function moveHandler(e) {
         lastSendTimestamp &&
         now - lastSendTimestamp < 1000 / Constants.SEND_FPS
     ) {
+        return;
     }
     lastSendTimestamp = now;
 
