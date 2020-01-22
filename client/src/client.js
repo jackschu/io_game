@@ -17,7 +17,7 @@ let yourWall;
 let playerWalls = {};
 let AnyMessage;
 let playerUpdate;
-
+let clientMessage;
 let app = new PIXI.Application({
     antialias: true,
     transparent: false,
@@ -104,12 +104,14 @@ function moveHandler(e) {
     lastSendTimestamp = now;
 
     const pos = e.data.getLocalPosition(app.stage);
-    let message = playerUpdate.create({
-        Xpos: clip(pos.x, 0, Constants.WIDTH),
-        Ypos: clip(pos.y, 0, Constants.HEIGHT),
+    let message = clientMessage.create({
+        player: {
+            Xpos: clip(pos.x, 0, Constants.WIDTH),
+            Ypos: clip(pos.y, 0, Constants.HEIGHT),
+        },
     });
 
-    const out = playerUpdate.encode(message).finish();
+    const out = clientMessage.encode(message).finish();
     socket.send(out);
 }
 
@@ -123,6 +125,7 @@ function setup() {
     let root = protobuf.Root.fromJSON(jsonDescriptor);
     AnyMessage = root.lookupType('AnyMessage');
     playerUpdate = root.lookupType('Player');
+    clientMessage = root.lookupType('ClientMessage');
     app.stage.interactive = true;
     app.stage.on('pointermove', moveHandler);
 

@@ -47,3 +47,14 @@ enum Wall {
   FRONT = 0;
   BACK = 1;
 }
+
+message Ping {
+  uint64 timestamp = 1;
+}
+
+message ClientMessage {
+  oneof data {
+    Player player = 1;
+    Ping ping = 2;
+  }
+}

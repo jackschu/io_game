@@ -1,8 +1,10 @@
 package websocket
 
 import (
+	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
 	"github.com/jackschu/io_game/pkg/communication"
+	pb "github.com/jackschu/io_game/pkg/proto"
 	"log"
 	"sync"
 )
@@ -55,11 +57,19 @@ func (c *Client) Read() {
 			log.Println(err)
 			return
 		}
-
+		message := pb.ClientMessage{}
+		err = proto.Unmarshal(p, &message)
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		if !c.HasRoom() {
 			continue
 		}
 
-		c.Room.SendMove(c, p)
+		switch u := message.Data.(type) {
+		case *pb.ClientMessage_Player:
+			c.Room.SendMove(c, u.Player)
+		}
 	}
 }
