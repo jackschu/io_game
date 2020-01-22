@@ -32,7 +32,7 @@ func NewRoom(gameLoop *game.GameLoop) *Room {
 	}
 }
 
-func (room *Room) SendMove(client *Client, data []byte) {
+func (room *Room) SendMove(client *Client, data *pb.Player) {
 	go room.GameLoop.UpdateAction(client.ID, data)
 }
 
@@ -73,11 +73,14 @@ func (room *Room) Start() {
 				log.Println("Update to ", update.ID, " failed, missing client")
 				break
 			}
-			if err := client.Conn.
-				WriteMessage(websocket.BinaryMessage, update.Data); err != nil {
-				log.Println(err)
-				break
-			}
+			to_client := communication.WriteMessage{MessageType: websocket.BinaryMessage, Message: update.Data}
+			go func(out chan<- communication.WriteMessage) {
+				select {
+				case out <- to_client:
+				case <-time.After(time.Millisecond * 100):
+					return
+				}
+			}(client.WriteChan)
 		}
 	}
 
