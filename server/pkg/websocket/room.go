@@ -3,10 +3,12 @@ package websocket
 import (
 	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/jackschu/io_game/pkg/communication"
 	"github.com/jackschu/io_game/pkg/game"
 	pb "github.com/jackschu/io_game/pkg/proto"
 	"log"
 	"sync/atomic"
+	"time"
 )
 
 type Room struct {
@@ -54,10 +56,16 @@ func (room *Room) Start() {
 
 			room.GameLoop.ClientLeave(client.ID)
 		case message := <-room.GameLoop.Broadcast:
+			to_client := communication.WriteMessage{MessageType: websocket.BinaryMessage, Message: message}
 			for _, client := range room.Clients {
-				if err := client.Conn.WriteMessage(websocket.BinaryMessage, message); err != nil {
-					log.Println(err)
-				}
+				go func(out chan<- communication.WriteMessage) {
+					select {
+					case out <- to_client:
+					case <-time.After(time.Millisecond * 100):
+						return
+					}
+				}(client.WriteChan)
+
 			}
 		case update := <-room.GameLoop.Updates:
 			client, present := room.Clients[update.ID]

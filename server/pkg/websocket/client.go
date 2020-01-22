@@ -2,16 +2,18 @@ package websocket
 
 import (
 	"github.com/gorilla/websocket"
+	"github.com/jackschu/io_game/pkg/communication"
 	"log"
 	"sync"
 )
 
 type Client struct {
-	ID    uint32
-	Conn  *websocket.Conn
-	Room  *Room
-	Queue *Queue
-	Mutex sync.Mutex
+	ID        uint32
+	Conn      *websocket.Conn
+	Room      *Room
+	Queue     *Queue
+	Mutex     sync.Mutex
+	WriteChan chan communication.WriteMessage
 }
 
 func (c *Client) SetRoom(room *Room) {
@@ -25,6 +27,15 @@ func (c *Client) HasRoom() bool {
 	hasRoom := c.Room != nil
 	c.Mutex.Unlock()
 	return hasRoom
+}
+
+func (c *Client) Write() {
+	for {
+		message := <-c.WriteChan
+		if err := c.Conn.WriteMessage(message.MessageType, message.Message); err != nil {
+			log.Println(err)
+		}
+	}
 }
 
 func (c *Client) Read() {
