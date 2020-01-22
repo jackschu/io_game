@@ -199,11 +199,16 @@ func (g *GameLoop) Start() {
 				if !ok {
 					continue
 				}
-				Xlast := curPlayer.Xpos
-				Ylast := curPlayer.Ypos
-				proto.UnmarshalMerge(action.Data, curPlayer)
-				curPlayer.Xlast = Xlast
-				curPlayer.Ylast = Ylast
+				savePlayer := pb.Player{}
+				savePlayer = *curPlayer
+				err := proto.UnmarshalMerge(action.Data, curPlayer)
+				if err != nil {
+					*curPlayer = savePlayer
+					log.Println("error in unmarshal", err, string(action.Data))
+				} else {
+					curPlayer.Xlast = savePlayer.Xpos
+					curPlayer.Ylast = savePlayer.Ypos
+				}
 			}
 			g.Actions = make(map[uint32]*communication.Action)
 			g.ActionsMutex.Unlock()
