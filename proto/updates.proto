@@ -5,6 +5,7 @@ message AnyMessage {
 	GameState state = 1;
 	GameStart start = 2;
 	PlayerJoin join = 3;
+    Ping pong = 4;
   }
 }
 
@@ -46,4 +47,15 @@ message PlayerJoin {
 enum Wall {
   FRONT = 0;
   BACK = 1;
+}
+
+message Ping {
+  uint64 timestamp = 1;
+}
+
+message ClientMessage {
+  oneof data {
+    Player player = 1;
+    Ping ping = 2;
+  }
 }

@@ -2,13 +2,13 @@ package websocket
 
 import (
 	"fmt"
-	"time"
-	"math/rand"
 	"github.com/gorilla/websocket"
+	"github.com/jackschu/io_game/pkg/communication"
 	"github.com/jackschu/io_game/pkg/game"
 	pb "github.com/jackschu/io_game/pkg/proto"
 	"log"
 	"sync/atomic"
+	"time"
 )
 
 type Room struct {
@@ -32,7 +32,7 @@ func NewRoom(gameLoop *game.GameLoop) *Room {
 	}
 }
 
-func (room *Room) SendMove(client *Client, data []byte) {
+func (room *Room) SendMove(client *Client, data *pb.Player) {
 	go room.GameLoop.UpdateAction(client.ID, data)
 }
 
@@ -57,14 +57,17 @@ func (room *Room) Start() {
 			room.GameLoop.ClientLeave(client.ID)
 		case message := <-room.GameLoop.Broadcast:
 			//@nocommit
-			if rand.Int()%6 > 4 {
-				time.Sleep(time.Duration(100+(rand.Int()%90))*time.Millisecond)
-			}
 
+			to_client := communication.WriteMessage{MessageType: websocket.BinaryMessage, Message: message}
 			for _, client := range room.Clients {
-				if err := client.Conn.WriteMessage(websocket.BinaryMessage, message); err != nil {
-					log.Println(err)
-				}
+				go func(out chan<- communication.WriteMessage) {
+					select {
+					case out <- to_client:
+					case <-time.After(time.Millisecond * 100):
+						return
+					}
+				}(client.WriteChan)
+
 			}
 			
 		case update := <-room.GameLoop.Updates:
@@ -73,11 +76,14 @@ func (room *Room) Start() {
 				log.Println("Update to ", update.ID, " failed, missing client")
 				break
 			}
-			if err := client.Conn.
-				WriteMessage(websocket.BinaryMessage, update.Data); err != nil {
-				log.Println(err)
-				break
-			}
+			to_client := communication.WriteMessage{MessageType: websocket.BinaryMessage, Message: update.Data}
+			go func(out chan<- communication.WriteMessage) {
+				select {
+				case out <- to_client:
+				case <-time.After(time.Millisecond * 100):
+					return
+				}
+			}(client.WriteChan)
 		}
 	}
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/jackschu/io_game/pkg/communication"
 	"github.com/jackschu/io_game/pkg/websocket"
 	"log"
 	"net/http"
@@ -16,13 +17,16 @@ func serveWs(queue *websocket.Queue, w http.ResponseWriter, r *http.Request) {
 	log.Println("Client Connected")
 	id := <-queue.PlayerIDs
 	client := &websocket.Client{
-		ID:    id,
-		Conn:  conn,
-		Room:  nil,
-		Queue: queue,
+		ID:        id,
+		Conn:      conn,
+		Room:      nil,
+		Queue:     queue,
+		WriteChan: make(chan communication.WriteMessage),
 	}
 	queue.AddClient(client)
+	go client.Write()
 	client.Read()
+
 }
 
 func setupRoutes() {

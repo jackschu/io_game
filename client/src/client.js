@@ -17,7 +17,8 @@ let yourWall;
 let playerWalls = {};
 let AnyMessage;
 let playerUpdate;
-
+let clientMessage;
+let latency;
 let app = new PIXI.Application({
     antialias: true,
     transparent: false,
@@ -30,14 +31,30 @@ let app = new PIXI.Application({
 document.body.appendChild(app.view);
 window.addEventListener('resize', resize);
 
+function sendPing() {
+    let message = clientMessage.create({
+        ping: {
+            timestamp: Date.now(),
+        },
+    });
+    console.log('sending ping');
+    const out = clientMessage.encode(message).finish();
+    socket.send(out);
+}
+
 socket.onmessage = event => {
     if (!gameStarted) {
         gameStarted = true;
         resize();
         setup();
+        sendPing();
     }
     let pbMessage = AnyMessage.decode(new Uint8Array(event.data));
     switch (pbMessage.data) {
+        case 'pong':
+            latency = Date.now() - pbMessage.pong.timestamp;
+            setTimeout(sendPing, 1000);
+            break;
         case 'state':
             let pbState = pbMessage.state;
             let pbObject = pbState;
@@ -104,12 +121,14 @@ function moveHandler(e) {
     lastSendTimestamp = now;
 
     const pos = e.data.getLocalPosition(app.stage);
-    let message = playerUpdate.create({
-        Xpos: clip(pos.x, 0, Constants.WIDTH),
-        Ypos: clip(pos.y, 0, Constants.HEIGHT),
+    let message = clientMessage.create({
+        player: {
+            Xpos: clip(pos.x, 0, Constants.WIDTH),
+            Ypos: clip(pos.y, 0, Constants.HEIGHT),
+        },
     });
 
-    const out = playerUpdate.encode(message).finish();
+    const out = clientMessage.encode(message).finish();
     socket.send(out);
 }
 
@@ -123,6 +142,7 @@ function setup() {
     let root = protobuf.Root.fromJSON(jsonDescriptor);
     AnyMessage = root.lookupType('AnyMessage');
     playerUpdate = root.lookupType('Player');
+    clientMessage = root.lookupType('ClientMessage');
     app.stage.interactive = true;
     app.stage.on('pointermove', moveHandler);
 
@@ -187,3 +207,5 @@ if (module.hot) {
         console.log('socket_io.js hot-reloaded');
     });
 }
+
+export { latency };

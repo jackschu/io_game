@@ -1,18 +1,23 @@
 package websocket
 
 import (
+	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
+	"github.com/jackschu/io_game/pkg/communication"
+	pb "github.com/jackschu/io_game/pkg/proto"
 	"log"
 	"sync"
 	"time"
+	"math/rand"
 )
 
 type Client struct {
-	ID    uint32
-	Conn  *websocket.Conn
-	Room  *Room
-	Queue *Queue
-	Mutex sync.Mutex
+	ID        uint32
+	Conn      *websocket.Conn
+	Room      *Room
+	Queue     *Queue
+	Mutex     sync.Mutex
+	WriteChan chan communication.WriteMessage
 }
 
 func (c *Client) SetRoom(room *Room) {
@@ -26,6 +31,20 @@ func (c *Client) HasRoom() bool {
 	hasRoom := c.Room != nil
 	c.Mutex.Unlock()
 	return hasRoom
+}
+
+func (c *Client) Write() {
+	for {
+		if rand.Int()%6 > 4 {
+			time.Sleep(time.Duration(100+(rand.Int()%90))*time.Millisecond)
+		}
+
+
+		message := <-c.WriteChan
+		if err := c.Conn.WriteMessage(message.MessageType, message.Message); err != nil {
+			log.Println(err)
+		}
+	}
 }
 
 func (c *Client) Read() {
@@ -45,14 +64,31 @@ func (c *Client) Read() {
 			log.Println(err)
 			return
 		}
-
+		message := pb.ClientMessage{}
+		err = proto.Unmarshal(p, &message)
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		if !c.HasRoom() {
 			continue
 		}
-		//@nocommit
-		go func() {
-			time.Sleep(50 * time.Millisecond)
-			c.Room.SendMove(c, p)
-		}()
+		switch u := message.Data.(type) {
+		case *pb.ClientMessage_Player:
+			c.Room.SendMove(c, u.Player)
+		case *pb.ClientMessage_Ping:
+			data, err := proto.Marshal(&pb.AnyMessage{Data: &pb.AnyMessage_Pong{Pong: u.Ping}})
+			go func(out chan<- communication.WriteMessage) {
+				select {
+				case out <- communication.WriteMessage{MessageType: websocket.BinaryMessage, Message: data}:
+				case <-time.After(time.Millisecond * 100):
+					return
+				}
+			}(c.WriteChan)
+			if err != nil {
+				log.Fatal("marshaling error: ", err)
+			}
+
+		}
 	}
 }
