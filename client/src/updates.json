@@ -1,0 +1,133 @@
+{
+  "nested": {
+    "AnyMessage": {
+      "oneofs": {
+        "data": {
+          "oneof": [
+            "state",
+            "start",
+            "join"
+          ]
+        }
+      },
+      "fields": {
+        "state": {
+          "type": "GameState",
+          "id": 1
+        },
+        "start": {
+          "type": "GameStart",
+          "id": 2
+        },
+        "join": {
+          "type": "PlayerJoin",
+          "id": 3
+        }
+      }
+    },
+    "GameState": {
+      "fields": {
+        "ball": {
+          "type": "Ball",
+          "id": 1
+        },
+        "players": {
+          "keyType": "uint32",
+          "type": "Player",
+          "id": 2
+        },
+        "timestamp": {
+          "type": "uint64",
+          "id": 3
+        }
+      }
+    },
+    "Player": {
+      "fields": {
+        "Xpos": {
+          "type": "float",
+          "id": 1
+        },
+        "Ypos": {
+          "type": "float",
+          "id": 2
+        },
+        "Xlast": {
+          "type": "float",
+          "id": 3
+        },
+        "Ylast": {
+          "type": "float",
+          "id": 4
+        }
+      }
+    },
+    "Ball": {
+      "fields": {
+        "Xpos": {
+          "type": "float",
+          "id": 1
+        },
+        "Ypos": {
+          "type": "float",
+          "id": 2
+        },
+        "Zpos": {
+          "type": "float",
+          "id": 3
+        },
+        "Xvel": {
+          "type": "float",
+          "id": 4
+        },
+        "Yvel": {
+          "type": "float",
+          "id": 5
+        },
+        "Zvel": {
+          "type": "float",
+          "id": 6
+        },
+        "Xang": {
+          "type": "float",
+          "id": 7
+        },
+        "Yang": {
+          "type": "float",
+          "id": 8
+        },
+        "Zang": {
+          "type": "float",
+          "id": 9
+        }
+      }
+    },
+    "GameStart": {
+      "fields": {
+        "YourID": {
+          "type": "uint32",
+          "id": 1
+        },
+        "wall": {
+          "type": "Wall",
+          "id": 2
+        }
+      }
+    },
+    "PlayerJoin": {
+      "fields": {
+        "playerWalls": {
+          "keyType": "uint32",
+          "type": "Wall",
+          "id": 1
+        }
+      }
+    },
+    "Wall": {
+      "values": {
+        "FRONT": 0,
+        "BACK": 1
+      }
+    }
+  }
+}
