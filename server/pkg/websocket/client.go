@@ -6,6 +6,7 @@ import (
 	"github.com/jackschu/io_game/pkg/communication"
 	pb "github.com/jackschu/io_game/pkg/proto"
 	"log"
+	"time"
 	"sync"
 )
 
@@ -70,6 +71,19 @@ func (c *Client) Read() {
 		switch u := message.Data.(type) {
 		case *pb.ClientMessage_Player:
 			c.Room.SendMove(c, u.Player)
+		case *pb.ClientMessage_Ping:
+			data, err := proto.Marshal(&pb.AnyMessage{Data: &pb.AnyMessage_Pong{Pong: u.Ping}})
+			go func(out chan<- communication.WriteMessage) {
+				select {
+				case out <- communication.WriteMessage{MessageType: websocket.BinaryMessage, Message: data}:
+				case <-time.After(time.Millisecond * 100):
+					return
+				}
+			}(c.WriteChan)
+			if err != nil {
+				log.Fatal("marshaling error: ", err)
+			}
+
 		}
 	}
 }

@@ -200,7 +200,7 @@ if (goog.DEBUG && !COMPILED) {
  * @private {!Array<!Array<number>>}
  * @const
  */
-proto.AnyMessage.oneofGroups_ = [[1,2,3]];
+proto.AnyMessage.oneofGroups_ = [[1,2,3,4]];
 
 /**
  * @enum {number}
@@ -209,7 +209,8 @@ proto.AnyMessage.DataCase = {
   DATA_NOT_SET: 0,
   STATE: 1,
   START: 2,
-  JOIN: 3
+  JOIN: 3,
+  PONG: 4
 };
 
 /**
@@ -252,7 +253,8 @@ proto.AnyMessage.toObject = function(includeInstance, msg) {
   var f, obj = {
     state: (f = msg.getState()) && proto.GameState.toObject(includeInstance, f),
     start: (f = msg.getStart()) && proto.GameStart.toObject(includeInstance, f),
-    join: (f = msg.getJoin()) && proto.PlayerJoin.toObject(includeInstance, f)
+    join: (f = msg.getJoin()) && proto.PlayerJoin.toObject(includeInstance, f),
+    pong: (f = msg.getPong()) && proto.Ping.toObject(includeInstance, f)
   };
 
   if (includeInstance) {
@@ -303,6 +305,11 @@ proto.AnyMessage.deserializeBinaryFromReader = function(msg, reader) {
       var value = new proto.PlayerJoin;
       reader.readMessage(value,proto.PlayerJoin.deserializeBinaryFromReader);
       msg.setJoin(value);
+      break;
+    case 4:
+      var value = new proto.Ping;
+      reader.readMessage(value,proto.Ping.deserializeBinaryFromReader);
+      msg.setPong(value);
       break;
     default:
       reader.skipField();
@@ -355,6 +362,14 @@ proto.AnyMessage.serializeBinaryToWriter = function(message, writer) {
       3,
       f,
       proto.PlayerJoin.serializeBinaryToWriter
+    );
+  }
+  f = message.getPong();
+  if (f != null) {
+    writer.writeMessage(
+      4,
+      f,
+      proto.Ping.serializeBinaryToWriter
     );
   }
 };
@@ -468,6 +483,43 @@ proto.AnyMessage.prototype.clearJoin = function() {
  */
 proto.AnyMessage.prototype.hasJoin = function() {
   return jspb.Message.getField(this, 3) != null;
+};
+
+
+/**
+ * optional Ping pong = 4;
+ * @return {?proto.Ping}
+ */
+proto.AnyMessage.prototype.getPong = function() {
+  return /** @type{?proto.Ping} */ (
+    jspb.Message.getWrapperField(this, proto.Ping, 4));
+};
+
+
+/**
+ * @param {?proto.Ping|undefined} value
+ * @return {!proto.AnyMessage} returns this
+*/
+proto.AnyMessage.prototype.setPong = function(value) {
+  return jspb.Message.setOneofWrapperField(this, 4, proto.AnyMessage.oneofGroups_[0], value);
+};
+
+
+/**
+ * Clears the message field making it undefined.
+ * @return {!proto.AnyMessage} returns this
+ */
+proto.AnyMessage.prototype.clearPong = function() {
+  return this.setPong(undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.AnyMessage.prototype.hasPong = function() {
+  return jspb.Message.getField(this, 4) != null;
 };
 
 

@@ -5,6 +5,7 @@ message AnyMessage {
 	GameState state = 1;
 	GameStart start = 2;
 	PlayerJoin join = 3;
+    Ping pong = 4;
   }
 }
 

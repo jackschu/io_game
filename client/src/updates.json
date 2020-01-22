@@ -6,7 +6,8 @@
           "oneof": [
             "state",
             "start",
-            "join"
+            "join",
+            "pong"
           ]
         }
       },
@@ -22,6 +23,10 @@
         "join": {
           "type": "PlayerJoin",
           "id": 3
+        },
+        "pong": {
+          "type": "Ping",
+          "id": 4
         }
       }
     },
