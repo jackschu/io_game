@@ -1,5 +1,5 @@
 import { socket } from './socket_io';
-import { addState } from './states';
+import { addState, generateNextFrame } from './states';
 import { clip } from './utils';
 import { DepthIndicator, boxesTunnel, debugCorners } from './box';
 import { Player } from './player';
@@ -8,6 +8,7 @@ import Constants from '../../Constants';
 
 let players = {};
 let ball;
+let serverBall;
 let depthIndicator;
 let playerSize;
 let lastSendTimestamp;
@@ -19,6 +20,10 @@ let AnyMessage;
 let playerUpdate;
 let clientMessage;
 let latency;
+
+let pbBall;
+let dontCommit;
+
 let app = new PIXI.Application({
     antialias: true,
     transparent: false,
@@ -50,6 +55,7 @@ socket.onmessage = event => {
         sendPing();
     }
     let pbMessage = AnyMessage.decode(new Uint8Array(event.data));
+
     switch (pbMessage.data) {
         case 'pong':
             latency = Date.now() - pbMessage.pong.timestamp;
@@ -57,7 +63,8 @@ socket.onmessage = event => {
             break;
         case 'state':
             let pbState = pbMessage.state;
-            let pbObject = pbState;
+            let pbObject = AnyMessage.toObject(pbMessage, { defaults: true })
+                .state;
             let timestamp = pbObject.timestamp;
             let rawPlayerData = pbObject.players;
 
@@ -85,12 +92,16 @@ socket.onmessage = event => {
 
             let ballData = pbObject.ball;
             if (ball === undefined) {
-                ball = new Ball(ballData.zpos);
+                ball = new Ball(ballData);
+                serverBall = new Ball(ballData, 0x00ff00);
+                dontCommit = ballData;
                 ball.pixiObj = toSprite(ball.pixiObj);
-                console.log('new ball', pbObject.ball.pixiObj);
+                serverBall.pixiObj = toSprite(serverBall.pixiObj);
+                console.log('new ball', ballData);
                 app.stage.addChild(ball.pixiObj);
+                app.stage.addChild(serverBall.pixiObj);
             }
-            addState(ballData, timestamp, ball);
+            addState(ballData, timestamp, serverBall);
             break;
         case 'start':
             let pbStartMessage = pbMessage.start;
@@ -141,6 +152,7 @@ function setup() {
 
     let root = protobuf.Root.fromJSON(jsonDescriptor);
     AnyMessage = root.lookupType('AnyMessage');
+    pbBall = root.lookupType('Ball');
     playerUpdate = root.lookupType('Player');
     clientMessage = root.lookupType('ClientMessage');
     app.stage.interactive = true;
@@ -167,7 +179,9 @@ function gameLoop(delta) {
     }
 
     if (ball) {
-        ball.update(yourWall);
+        dontCommit = generateNextFrame(dontCommit, players, delta * 16);
+        ball.update(yourWall, dontCommit);
+        serverBall.update(yourWall, null);
         depthIndicator.update(ball.zPos);
     }
 }

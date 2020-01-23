@@ -1,8 +1,10 @@
 import Constants from '../../Constants';
 import { latency } from './client.js';
-
+import { tickState } from './ball';
 let states = new WeakMap();
 let serverClientGap;
+let historyDuration = 0;
+let frames = [];
 
 function clientTime() {
     return Date.now() + serverClientGap;
@@ -27,6 +29,50 @@ function interpolate(curState, nextState, ratio) {
             (nextState.data[key] - curState.data[key]) * ratio;
     });
     return newState;
+}
+
+//@nocommit, naive for now
+export function onServerState(serverState) {
+    let dt = Max(0, historyDuration - latency);
+    historyDuration -= dt;
+    while (frames.length > 0 && dt > 0) {
+        if (dt >= frames[0].dt) {
+            dt -= frames[0].dt;
+            frame.shift();
+        } else {
+            let t = 1 - dt / frames[0].dt;
+            frames[0].dt -= dt;
+            frames[0].dXpos *= t;
+            frames[0].dYpos *= t;
+            frames[0].dZpos *= t;
+            frames[0].dXvel *= t;
+            frames[0].dYvel *= t;
+            frames[0].dZvel *= t;
+            frames[0].dXang *= t;
+            frames[0].dYang *= t;
+            frames[0].dZang *= t;
+            break;
+        }
+    }
+}
+
+export function generateNextFrame(latest, players, dt) {
+    let next = tickState(latest, dt);
+    let frame = {
+        dt: dt,
+        dXpos: next.Xpos - latest.Xpos,
+        dYpos: next.Ypos - latest.Ypos,
+        dZpos: next.Zpos - latest.Zpos,
+        dXvel: next.Xvel - latest.Xvel,
+        dYvel: next.Yvel - latest.Yvel,
+        dZvel: next.Zvel - latest.Zvel,
+        dXang: next.Xang - latest.Xang,
+        dYang: next.Yang - latest.Yang,
+        dZang: next.Zang - latest.Zang,
+    };
+    historyDuration += dt;
+    frames.push(frame);
+    return next;
 }
 
 export function addState(rawState, timestamp, obj) {

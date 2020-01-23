@@ -14,13 +14,10 @@ socket.onclose = event => {
     console.log('Socket Closed Connection: ', event);
 };
 
-socket.onmessage = event => {
-    console.log(event);
-};
-
 socket.onerror = error => {
     console.log('Socket Error: ', error);
 };
+
 socket.binaryType = 'arraybuffer';
 
 export { socket };
