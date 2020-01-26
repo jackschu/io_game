@@ -1,5 +1,5 @@
 import { socket } from './socket_io';
-import { addState, generateNextFrame } from './states';
+import { addState, generateNextFrame, onServerState } from './states';
 import { clip } from './utils';
 import { DepthIndicator, boxesTunnel, debugCorners } from './box';
 import { Player } from './player';
@@ -94,13 +94,14 @@ socket.onmessage = event => {
             if (ball === undefined) {
                 ball = new Ball(ballData);
                 serverBall = new Ball(ballData, 0x00ff00);
-                dontCommit = ballData;
                 ball.pixiObj = toSprite(ball.pixiObj);
                 serverBall.pixiObj = toSprite(serverBall.pixiObj);
                 console.log('new ball', ballData);
                 app.stage.addChild(ball.pixiObj);
                 app.stage.addChild(serverBall.pixiObj);
             }
+            dontCommit = onServerState(ballData);
+            //console.log(dontCommit);
             addState(ballData, timestamp, serverBall);
             break;
         case 'start':

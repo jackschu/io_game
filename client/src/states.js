@@ -33,7 +33,8 @@ function interpolate(curState, nextState, ratio) {
 
 //@nocommit, naive for now
 export function onServerState(serverState) {
-    let dt = Max(0, historyDuration - latency);
+    let predictedState;
+    let dt = Math.max(0, historyDuration - latency);
     historyDuration -= dt;
     while (frames.length > 0 && dt > 0) {
         if (dt >= frames[0].dt) {
@@ -45,15 +46,51 @@ export function onServerState(serverState) {
             frames[0].dXpos *= t;
             frames[0].dYpos *= t;
             frames[0].dZpos *= t;
-            frames[0].dXvel *= t;
-            frames[0].dYvel *= t;
-            frames[0].dZvel *= t;
-            frames[0].dXang *= t;
-            frames[0].dYang *= t;
-            frames[0].dZang *= t;
             break;
         }
+        console.log('loop');
     }
+
+    if (
+        frames.length > 0 &&
+        Math.hypot(
+            serverState.Xvel - frames[0].Xvel,
+            serverState.Yvel - frames[0].Yvel,
+            serverState.Zvel - frames[0].Zvel,
+            serverState.Xang - frames[0].Xang,
+            serverState.Yang - frames[0].Yang,
+            serverState.Zang - frames[0].Zang
+        ) > 10.0
+    ) {
+        console.log(
+            Math.hypot(
+                serverState.Xvel - frames[0].Xvel,
+                serverState.Yvel - frames[0].Yvel,
+                serverState.Zvel - frames[0].Zvel,
+                serverState.Xang - frames[0].Xang,
+                serverState.Yang - frames[0].Yang,
+                serverState.Zang - frames[0].Zang
+            )
+        );
+        predictedState = JSON.parse(JSON.stringify(serverState));
+        for (let frame of frames) {
+        }
+    } else {
+        predictedState = {
+            Xpos: serverState.Xpos,
+            Ypos: serverState.Ypos,
+            Zpos: serverState.Zpos,
+        };
+
+        for (const frame of frames) {
+            //console.log(frame);
+            predictedState.Xpos += frame.dXpos;
+            predictedState.Ypos += frame.dYpos;
+            predictedState.Zpos += frame.dZpos;
+        }
+        //console.log(predictedState);
+    }
+    return predictedState;
 }
 
 export function generateNextFrame(latest, players, dt) {
@@ -63,13 +100,14 @@ export function generateNextFrame(latest, players, dt) {
         dXpos: next.Xpos - latest.Xpos,
         dYpos: next.Ypos - latest.Ypos,
         dZpos: next.Zpos - latest.Zpos,
-        dXvel: next.Xvel - latest.Xvel,
-        dYvel: next.Yvel - latest.Yvel,
-        dZvel: next.Zvel - latest.Zvel,
-        dXang: next.Xang - latest.Xang,
-        dYang: next.Yang - latest.Yang,
-        dZang: next.Zang - latest.Zang,
+        Xvel: next.Xvel,
+        Yvel: next.Yvel,
+        Zvel: next.Zvel,
+        Xang: next.Xang,
+        Yang: next.Yang,
+        Zang: next.Zang,
     };
+    //console.log('input frame', frame);
     historyDuration += dt;
     frames.push(frame);
     return next;
