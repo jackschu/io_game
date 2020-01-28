@@ -19,10 +19,10 @@ let playerWalls = {};
 let AnyMessage;
 let playerUpdate;
 let clientMessage;
-let latency;
-
+let latency = 0;
+let displayState;
 let pbBall;
-let dontCommit;
+let predictedState;
 
 let app = new PIXI.Application({
     antialias: true,
@@ -58,7 +58,7 @@ socket.onmessage = event => {
 
     switch (pbMessage.data) {
         case 'pong':
-            latency = Date.now() - pbMessage.pong.timestamp;
+            latency = Math.max(0, Date.now() - pbMessage.pong.timestamp);
             setTimeout(sendPing, 1000);
             break;
         case 'state':
@@ -92,7 +92,9 @@ socket.onmessage = event => {
 
             let ballData = pbObject.ball;
             if (ball === undefined) {
-                ball = new Ball(ballData);
+                ball = new Ball(ballData, 0x0000ff);
+                // first ball data is our original predictedState
+                predictedState = ballData;
                 serverBall = new Ball(ballData, 0x00ff00);
                 ball.pixiObj = toSprite(ball.pixiObj);
                 serverBall.pixiObj = toSprite(serverBall.pixiObj);
@@ -100,8 +102,8 @@ socket.onmessage = event => {
                 app.stage.addChild(ball.pixiObj);
                 app.stage.addChild(serverBall.pixiObj);
             }
-            dontCommit = onServerState(ballData);
-            //console.log(dontCommit);
+            predictedState = onServerState(ballData);
+            console.log(predictedState);
             addState(ballData, timestamp, serverBall);
             break;
         case 'start':
@@ -180,8 +182,14 @@ function gameLoop(delta) {
     }
 
     if (ball) {
-        dontCommit = generateNextFrame(dontCommit, players, delta * 16);
-        ball.update(yourWall, dontCommit);
+        // predict new state, display state is smoothed version
+        [predictedState, displayState] = generateNextFrame(
+            predictedState,
+            players,
+            delta * 16,
+            displayState
+        );
+        ball.update(yourWall, displayState);
         serverBall.update(yourWall, null);
         depthIndicator.update(ball.zPos);
     }

@@ -40,7 +40,7 @@ type GameLoop struct {
 
 func NewGameLoop() *GameLoop {
 	return &GameLoop{
-		Broadcast:      make(chan []byte, 30), // @nocommit make 8
+		Broadcast:      make(chan []byte, 8),
 		Actions:        make(map[uint32]*pb.Player),
 		Updates:        make(chan *communication.SingleMessage, 2),
 		PlayerCount:    0,

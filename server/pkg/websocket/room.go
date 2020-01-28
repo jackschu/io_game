@@ -56,8 +56,6 @@ func (room *Room) Start() {
 
 			room.GameLoop.ClientLeave(client.ID)
 		case message := <-room.GameLoop.Broadcast:
-			//@nocommit
-
 			to_client := communication.WriteMessage{MessageType: websocket.BinaryMessage, Message: message}
 			for _, client := range room.Clients {
 				go func(out chan<- communication.WriteMessage) {
@@ -69,7 +67,7 @@ func (room *Room) Start() {
 				}(client.WriteChan)
 
 			}
-			
+
 		case update := <-room.GameLoop.Updates:
 			client, present := room.Clients[update.ID]
 			if !present {

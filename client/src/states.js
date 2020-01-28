@@ -31,15 +31,17 @@ function interpolate(curState, nextState, ratio) {
     return newState;
 }
 
-//@nocommit, naive for now
 export function onServerState(serverState) {
     let predictedState;
-    let dt = Math.max(0, historyDuration - latency);
+    let adjustedLatency = latency + 1;
+    let dt = Math.max(0, historyDuration - adjustedLatency);
     historyDuration -= dt;
+
+    // remove history outside of latency window
     while (frames.length > 0 && dt > 0) {
         if (dt >= frames[0].dt) {
             dt -= frames[0].dt;
-            frame.shift();
+            frames.shift();
         } else {
             let t = 1 - dt / frames[0].dt;
             frames[0].dt -= dt;
@@ -48,58 +50,65 @@ export function onServerState(serverState) {
             frames[0].dZpos *= t;
             break;
         }
-        console.log('loop');
     }
+    predictedState = JSON.parse(JSON.stringify(serverState));
 
+    // if incoming data is sufficiently different from what we thought it would be
+    // replay frame history to adjust, otherwise just apply deltas
     if (
         frames.length > 0 &&
-        Math.hypot(
+        (Math.hypot(
             serverState.Xvel - frames[0].Xvel,
             serverState.Yvel - frames[0].Yvel,
             serverState.Zvel - frames[0].Zvel,
             serverState.Xang - frames[0].Xang,
             serverState.Yang - frames[0].Yang,
             serverState.Zang - frames[0].Zang
-        ) > 10.0
-    ) {
-        console.log(
+        ) > 7.0 ||
             Math.hypot(
-                serverState.Xvel - frames[0].Xvel,
-                serverState.Yvel - frames[0].Yvel,
-                serverState.Zvel - frames[0].Zvel,
-                serverState.Xang - frames[0].Xang,
-                serverState.Yang - frames[0].Yang,
-                serverState.Zang - frames[0].Zang
-            )
-        );
-        predictedState = JSON.parse(JSON.stringify(serverState));
+                serverState.Xpos - frames[0].Xpos,
+                serverState.Ypos - frames[0].Ypos,
+                serverState.Zpos - frames[0].Zpos
+            ) > 3.0)
+    ) {
         for (let frame of frames) {
+            let next = tickState(predictedState, frame.dt);
+            frame.dXpos = next.Xpos - predictedState.Xpos;
+            frame.dYpos = next.Ypos - predictedState.Ypos;
+            frame.dZpos = next.Zpos - predictedState.Zpos;
+            frame.Xpos = next.Xpos;
+            frame.Ypos = next.Ypos;
+            frame.Zpos = next.Zpos;
+            frame.Xvel = next.Xvel;
+            frame.Yvel = next.Yvel;
+            frame.Zvel = next.Zvel;
+            frame.Xang = next.Xang;
+            frame.Yang = next.Yang;
+            frame.Zang = next.Zang;
+            predictedState = next;
         }
     } else {
-        predictedState = {
-            Xpos: serverState.Xpos,
-            Ypos: serverState.Ypos,
-            Zpos: serverState.Zpos,
-        };
-
         for (const frame of frames) {
-            //console.log(frame);
             predictedState.Xpos += frame.dXpos;
             predictedState.Ypos += frame.dYpos;
             predictedState.Zpos += frame.dZpos;
         }
-        //console.log(predictedState);
     }
     return predictedState;
 }
 
-export function generateNextFrame(latest, players, dt) {
+// @nomaster check if latest is ever undefined
+export function generateNextFrame(latest, players, dt, lastDisplay) {
+    let adjustedLatency = latency + 1;
     let next = tickState(latest, dt);
     let frame = {
         dt: dt,
         dXpos: next.Xpos - latest.Xpos,
         dYpos: next.Ypos - latest.Ypos,
         dZpos: next.Zpos - latest.Zpos,
+        Xpos: next.Xpos,
+        Ypos: next.Ypos,
+        Zpos: next.Zpos,
         Xvel: next.Xvel,
         Yvel: next.Yvel,
         Zvel: next.Zvel,
@@ -107,10 +116,31 @@ export function generateNextFrame(latest, players, dt) {
         Yang: next.Yang,
         Zang: next.Zang,
     };
-    //console.log('input frame', frame);
+
     historyDuration += dt;
     frames.push(frame);
-    return next;
+
+    // no need to smooth if no last display
+    if (!lastDisplay) {
+        console.log('last display is null');
+        return [next, next];
+    }
+
+    // higher is more smoothing
+    const convergence = 0.05;
+    const extrapolatedXpos =
+        latest.Xpos + next.Xvel * convergence * adjustedLatency;
+    const extrapolatedYpos =
+        latest.Ypos + next.Yvel * convergence * adjustedLatency;
+    const extrapolatedZpos =
+        latest.Zpos + next.Zvel * convergence * adjustedLatency;
+    const t = dt / (adjustedLatency * (1 + convergence));
+    const displayOut = {
+        Xpos: lastDisplay.Xpos + (extrapolatedXpos - lastDisplay.Xpos) * t,
+        Ypos: lastDisplay.Ypos + (extrapolatedYpos - lastDisplay.Ypos) * t,
+        Zpos: lastDisplay.Zpos + (extrapolatedZpos - lastDisplay.Zpos) * t,
+    };
+    return [next, displayOut];
 }
 
 export function addState(rawState, timestamp, obj) {

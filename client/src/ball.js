@@ -10,36 +10,36 @@ let pbWall = root.lookup('Wall');
 export class Ball {
     constructor(zPos, color = 0xff0000) {
         this.pixiObj = new PIXI.Graphics();
-        this.pixiObj.beginFill(color);
+        this.pixiObj.beginFill(color, 0.5);
         this.pixiObj.drawCircle(0, 0, Constants.BALL_RADIUS);
         this.zPos = zPos;
     }
 
+    // @nomaster remove dependency on generateCurrentState (interpolation)
     update(povWall, curState) {
         if (curState === null) {
             curState = generateCurrentState(this);
-
             if (curState === null) {
                 return;
             }
         }
-
+        let adjustedZpos = curState.Zpos;
         if (povWall === pbWall.values.BACK) {
-            curState.Zpos = Constants.DEPTH - curState.Zpos;
+            adjustedZpos = Constants.DEPTH - curState.Zpos;
         }
         let [x0, _] = pointProject(
             Constants.BALL_RADIUS + Constants.WIDTH / 2,
             0,
-            curState.Zpos
+            adjustedZpos
         );
         let radius = x0 - Constants.WIDTH / 2;
 
-        let [x, y] = pointProject(curState.Xpos, curState.Ypos, curState.Zpos);
+        let [x, y] = pointProject(curState.Xpos, curState.Ypos, adjustedZpos);
         let ratio = radius / Constants.BALL_RADIUS;
         this.pixiObj.scale.x = this.pixiObj.scale.y = ratio;
         this.pixiObj.x = x - radius;
         this.pixiObj.y = y - radius;
-        this.zPos = curState.Zpos;
+        this.zPos = adjustedZpos;
     }
 }
 
@@ -92,11 +92,14 @@ function applySpin(ball) {
 
 export function tickState(latest, dt) {
     let next = JSON.parse(JSON.stringify(latest));
+    //console.log('init', next, latest);
     applyWalls(latest, next);
+    //console.log('mid', next, latest);
     applySpin(next);
 
     next.Xpos += dt * next.Xvel;
     next.Ypos += dt * next.Yvel;
     next.Zpos += dt * next.Zvel;
+    //console.log('end', next, latest);
     return next;
 }

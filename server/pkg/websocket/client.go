@@ -6,9 +6,9 @@ import (
 	"github.com/jackschu/io_game/pkg/communication"
 	pb "github.com/jackschu/io_game/pkg/proto"
 	"log"
+	"math/rand"
 	"sync"
 	"time"
-	"math/rand"
 )
 
 type Client struct {
@@ -35,11 +35,6 @@ func (c *Client) HasRoom() bool {
 
 func (c *Client) Write() {
 	for {
-		if rand.Int()%6 > 4 {
-			time.Sleep(time.Duration(100+(rand.Int()%90))*time.Millisecond)
-		}
-
-
 		message := <-c.WriteChan
 		if err := c.Conn.WriteMessage(message.MessageType, message.Message); err != nil {
 			log.Println(err)
