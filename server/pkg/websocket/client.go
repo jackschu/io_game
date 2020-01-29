@@ -6,7 +6,6 @@ import (
 	"github.com/jackschu/io_game/pkg/communication"
 	pb "github.com/jackschu/io_game/pkg/proto"
 	"log"
-	"math/rand"
 	"sync"
 	"time"
 )
