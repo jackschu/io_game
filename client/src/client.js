@@ -95,15 +95,14 @@ socket.onmessage = event => {
                 ball = new Ball(ballData, 0x0000ff);
                 // first ball data is our original predictedState
                 predictedState = ballData;
-                serverBall = new Ball(ballData, 0x00ff00);
+                serverBall = new Ball(ballData, 0xffffff);
                 ball.pixiObj = toSprite(ball.pixiObj);
                 serverBall.pixiObj = toSprite(serverBall.pixiObj);
                 console.log('new ball', ballData);
                 app.stage.addChild(ball.pixiObj);
-                app.stage.addChild(serverBall.pixiObj);
+                //app.stage.addChild(serverBall.pixiObj);
             }
             predictedState = onServerState(ballData);
-            console.log(predictedState);
             addState(ballData, timestamp, serverBall);
             break;
         case 'start':
@@ -189,6 +188,7 @@ function gameLoop(delta) {
             delta * 16,
             displayState
         );
+
         ball.update(yourWall, displayState);
         serverBall.update(yourWall, null);
         depthIndicator.update(ball.zPos);

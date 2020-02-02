@@ -26,7 +26,7 @@ func NewBallInfo() *pb.Ball {
 }
 
 type GameLoop struct {
-	Actions        map[uint32]*pb.Player
+	Actions        map[uint32]*communication.Action
 	Updates        chan *communication.SingleMessage
 	PlayerCount    uint32
 	Bots           []*Bot
@@ -41,7 +41,7 @@ type GameLoop struct {
 func NewGameLoop() *GameLoop {
 	return &GameLoop{
 		Broadcast:      make(chan []byte, 8),
-		Actions:        make(map[uint32]*pb.Player),
+		Actions:        make(map[uint32]*communication.Action),
 		Updates:        make(chan *communication.SingleMessage, 2),
 		PlayerCount:    0,
 		Bots:           nil,
@@ -109,7 +109,7 @@ func resetBall(ball *pb.Ball) {
 
 func (g *GameLoop) Start() {
 	prev := time.Now()
-	ticker := time.NewTicker(16 * 2 * time.Millisecond)
+	ticker := time.NewTicker(16*2 * time.Millisecond)
 	defer ticker.Stop()
 	for {
 		if atomic.LoadUint32(&g.PlayerCount) == 0 {
@@ -186,9 +186,7 @@ func (g *GameLoop) Start() {
 				log.Fatal("marshaling error: ", err)
 			}
 			select {
-
 			case g.Broadcast <- data:
-
 			default:
 				log.Println("full broadcast", atomic.LoadUint32(&g.PlayerCount))
 			}
@@ -199,15 +197,13 @@ func (g *GameLoop) Start() {
 				if !ok {
 					continue
 				}
-
 				Xlast := curPlayer.Xpos
 				Ylast := curPlayer.Ypos
-				curPlayer.Xpos = action.Xpos
-				curPlayer.Ypos = action.Ypos
+				proto.UnmarshalMerge(action.Data, curPlayer)
 				curPlayer.Xlast = Xlast
 				curPlayer.Ylast = Ylast
 			}
-			g.Actions = make(map[uint32]*pb.Player)
+			g.Actions = make(map[uint32]*communication.Action)
 			g.ActionsMutex.Unlock()
 
 			g.ClientsMutex.Unlock()
@@ -277,8 +273,8 @@ func (g *GameLoop) ClientLeave(id uint32) {
 	g.ActionsMutex.Unlock()
 }
 
-func (g *GameLoop) UpdateAction(id uint32, data *pb.Player) {
+func (g *GameLoop) UpdateAction(id uint32, data []byte) {
 	g.ActionsMutex.Lock()
-	g.Actions[id] = data
+	g.Actions[id] = &communication.Action{ID: id, Move: "move", Data: data}
 	g.ActionsMutex.Unlock()
 }

@@ -127,14 +127,15 @@ export function generateNextFrame(latest, players, dt, lastDisplay) {
     }
 
     // higher is more smoothing
-    const convergence = 0.05;
+    const convergence = 0.03;
     const extrapolatedXpos =
         latest.Xpos + next.Xvel * convergence * adjustedLatency;
     const extrapolatedYpos =
         latest.Ypos + next.Yvel * convergence * adjustedLatency;
     const extrapolatedZpos =
         latest.Zpos + next.Zvel * convergence * adjustedLatency;
-    const t = dt / (adjustedLatency * (1 + convergence));
+    const t = Math.min(1, dt / (adjustedLatency * (1 + convergence)));
+
     const displayOut = {
         Xpos: lastDisplay.Xpos + (extrapolatedXpos - lastDisplay.Xpos) * t,
         Ypos: lastDisplay.Ypos + (extrapolatedYpos - lastDisplay.Ypos) * t,
