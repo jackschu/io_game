@@ -138,8 +138,13 @@ func (g *GameLoop) Start() {
 						continue
 					}
 					if playerBallCollide(player, g.Ball) {
-						g.Ball.Xang += player.Ylast - player.Ypos
-						g.Ball.Yang += player.Xlast - player.Xpos
+						spinMultiple := float32(1.0)
+						if playerWall == 1 {
+							spinMultiple = -1
+						}
+
+						g.Ball.Xang += (player.Ylast - player.Ypos) * spinMultiple
+						g.Ball.Yang += (player.Xlast - player.Xpos) * spinMultiple
 						bounce = true
 						break
 					}
