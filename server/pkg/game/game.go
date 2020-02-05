@@ -88,7 +88,7 @@ func applySpin(ball *pb.Ball) {
 	multiple := float32(0.0002)
 
 	ball.Xvel += (ball.Yang*ball.Zvel - ball.Zang*ball.Yvel) * multiple
-	ball.Yvel += (ball.Zang*ball.Xvel - ball.Xang*ball.Zvel) * multiple
+	ball.Yvel += (ball.Xang*ball.Zvel - ball.Zang*ball.Xvel) * multiple
 
 	// additional constant for dampening spin affect z-velocity
 	// prevents ball from switching directions
