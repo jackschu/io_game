@@ -42,7 +42,6 @@ function sendPing() {
             timestamp: Date.now(),
         },
     });
-    console.log('sending ping');
     const out = clientMessage.encode(message).finish();
     socket.send(out);
 }
@@ -59,7 +58,8 @@ socket.onmessage = event => {
     switch (pbMessage.data) {
         case 'pong':
             latency = Math.max(0, Date.now() - pbMessage.pong.timestamp);
-            setTimeout(sendPing, 1000);
+            //console.log('latency', latency);
+            setTimeout(sendPing, 200);
             break;
         case 'state':
             let pbState = pbMessage.state;
@@ -171,6 +171,8 @@ function setup() {
 }
 
 // delta is the fractional lag between frames (1) if not lagging
+let dist_sum = 0;
+let dist_div = 0;
 function gameLoop(delta) {
     if (delta > 1.1) {
         console.log(delta);
@@ -181,6 +183,7 @@ function gameLoop(delta) {
     }
 
     if (ball) {
+        let forward_pre = predictedState.Zvel > 0;
         // predict new state, display state is smoothed version
         [predictedState, displayState] = generateNextFrame(
             predictedState,
@@ -190,7 +193,18 @@ function gameLoop(delta) {
         );
 
         ball.update(yourWall, displayState);
-        serverBall.update(yourWall, null);
+        let drawn = serverBall.update(yourWall, null);
+        let forward_pos = predictedState.Zvel > 0;
+        if (forward_pos != forward_pre) {
+            let dist = Math.hypot(
+                displayState.Ypos - drawn.Ypos,
+                displayState.Xpos - drawn.Xpos
+            );
+            dist_sum += dist;
+            dist_div += 1;
+
+            console.log('bounce dist', dist, dist_sum / dist_div);
+        }
         depthIndicator.update(ball.zPos);
     }
 }

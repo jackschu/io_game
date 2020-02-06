@@ -64,7 +64,7 @@ export function onServerState(serverState) {
             serverState.Xang - frames[0].Xang,
             serverState.Yang - frames[0].Yang,
             serverState.Zang - frames[0].Zang
-        ) > 7.0 ||
+        ) > 3.0 ||
             Math.hypot(
                 serverState.Xpos - frames[0].Xpos,
                 serverState.Ypos - frames[0].Ypos,
@@ -127,7 +127,7 @@ export function generateNextFrame(latest, players, dt, lastDisplay) {
     }
 
     // higher is more smoothing
-    const convergence = 0.03;
+    const convergence = 0.001;
     const extrapolatedXpos =
         latest.Xpos + next.Xvel * convergence * adjustedLatency;
     const extrapolatedYpos =

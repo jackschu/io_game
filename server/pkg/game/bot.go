@@ -2,6 +2,7 @@ package game
 
 import (
 	"math"
+	"math/rand"
 )
 
 type Bot struct {
@@ -14,7 +15,7 @@ func NewBot(id uint32, game *GameLoop) *Bot {
 	newBot := &Bot{
 		ID:       id,
 		Game:     game,
-		MaxSpeed: 14,
+		MaxSpeed: 140, //@nocommit change to 14
 	}
 	game.AddBot(newBot)
 	return newBot
@@ -32,13 +33,13 @@ func (bot *Bot) Act() {
 	hypot := math.Hypot(xDiff, yDiff)
 
 	if float32(hypot) <= bot.MaxSpeed {
-		botPlayer.Xpos = ball.Xpos
-		botPlayer.Ypos = ball.Ypos
+		botPlayer.Xpos = ball.Xpos + float32(rand.Intn(50)-25)
+		botPlayer.Ypos = ball.Ypos + float32(rand.Intn(50)-25)
 	} else {
 		xUnit := float32(xDiff / hypot)
 		yUnit := float32(yDiff / hypot)
 
-		botPlayer.Xpos += xUnit * bot.MaxSpeed
-		botPlayer.Ypos += yUnit * bot.MaxSpeed
+		botPlayer.Xpos += xUnit*bot.MaxSpeed*rand.Float32() + float32(rand.Intn(50)-25)
+		botPlayer.Ypos += yUnit*bot.MaxSpeed*rand.Float32() + float32(rand.Intn(50)-25)
 	}
 }

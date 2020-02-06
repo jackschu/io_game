@@ -40,6 +40,7 @@ export class Ball {
         this.pixiObj.x = x - radius;
         this.pixiObj.y = y - radius;
         this.zPos = adjustedZpos;
+        return curState;
     }
 }
 
@@ -78,28 +79,34 @@ function applyWalls(latest, next) {
 }
 
 function applySpin(ball) {
-    // constant that dampens spin effect
+    // constant that dampens    const zMultiple = 0.05; spin effect
     const multiple = 0.0002;
-    ball.Xvel += (ball.Yang * ball.Zvel - ball.Zang * ball.Yvel) * multiple;
-    ball.Yvel += (ball.Xang * ball.Zvel - ball.Zang * ball.Xvel) * multiple;
-
+    const zMultiple = 0.05;
+    let out = {
+        Xvel:
+            ball.Xvel +
+            (ball.Yang * ball.Zvel - ball.Zang * ball.Yvel) * multiple,
+        Yvel:
+            ball.Yvel +
+            (ball.Xang * ball.Zvel - ball.Zang * ball.Xvel) * multiple,
+        Zvel:
+            ball.Zvel +
+            (ball.Yang * ball.Xvel - ball.Xang * ball.Yvel) *
+                multiple *
+                zMultiple,
+    };
+    return out;
     // additional constant for dampening spin affect z-velocity
     // prevents ball from switching directions
-    const zMultiple = 0.05;
-    ball.Zvel +=
-        (ball.Yang * ball.Xvel - ball.Xang * ball.Yvel) * multiple * zMultiple;
 }
 
 export function tickState(latest, dt) {
     let next = JSON.parse(JSON.stringify(latest));
-    //console.log('init', next, latest);
     applyWalls(latest, next);
-    //console.log('mid', next, latest);
-    applySpin(next);
+    const modifiedVelocities = applySpin(next);
 
-    next.Xpos += dt * next.Xvel;
-    next.Ypos += dt * next.Yvel;
-    next.Zpos += dt * next.Zvel;
-    //console.log('end', next, latest);
+    next.Xpos += dt * modifiedVelocities.Xvel;
+    next.Ypos += dt * modifiedVelocities.Yvel;
+    next.Zpos += dt * modifiedVelocities.Zvel;
     return next;
 }

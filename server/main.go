@@ -30,7 +30,7 @@ func serveWs(queue *websocket.Queue, w http.ResponseWriter, r *http.Request) {
 }
 
 func setupRoutes() {
-	queue := websocket.NewQueue(2, 0)
+	queue := websocket.NewQueue(1, 2)
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(queue, w, r)
 	})
