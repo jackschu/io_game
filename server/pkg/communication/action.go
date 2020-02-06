@@ -10,3 +10,8 @@ type SingleMessage struct {
 	ID   uint32
 	Data []byte
 }
+
+type WriteMessage struct {
+	MessageType int
+	Message     []byte
+}

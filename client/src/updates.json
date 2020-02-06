@@ -6,7 +6,8 @@
           "oneof": [
             "state",
             "start",
-            "join"
+            "join",
+            "pong"
           ]
         }
       },
@@ -22,6 +23,10 @@
         "join": {
           "type": "PlayerJoin",
           "id": 3
+        },
+        "pong": {
+          "type": "Ping",
+          "id": 4
         }
       }
     },
@@ -127,6 +132,34 @@
       "values": {
         "FRONT": 0,
         "BACK": 1
+      }
+    },
+    "Ping": {
+      "fields": {
+        "timestamp": {
+          "type": "uint64",
+          "id": 1
+        }
+      }
+    },
+    "ClientMessage": {
+      "oneofs": {
+        "data": {
+          "oneof": [
+            "player",
+            "ping"
+          ]
+        }
+      },
+      "fields": {
+        "player": {
+          "type": "Player",
+          "id": 1
+        },
+        "ping": {
+          "type": "Ping",
+          "id": 2
+        }
       }
     }
   }

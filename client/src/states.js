@@ -1,4 +1,5 @@
 import Constants from '../../Constants';
+import { latency } from './client.js';
 
 let states = new WeakMap();
 let serverClientGap;
